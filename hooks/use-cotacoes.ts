@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react"
 
-interface Cotacao {
+export interface Cotacao {
+  id?: number
   produto: string
   local: string
   preco: number
   data_coleta: string
+  created_at?: string
 }
 
 export function useCotacoes() {
@@ -21,14 +23,21 @@ export function useCotacoes() {
         const response = await fetch("/api/cotacoes/latest")
 
         if (!response.ok) {
-          throw new Error("Falha ao buscar cotações")
+          const errorData = await response.json()
+          throw new Error(errorData.message || "Falha ao buscar cotações")
         }
 
         const data = await response.json()
-        setCotacoes(data.cotacoes)
+
+        if (data.success && Array.isArray(data.cotacoes)) {
+          setCotacoes(data.cotacoes)
+        } else {
+          setCotacoes([])
+          console.warn("Formato de dados inesperado:", data)
+        }
       } catch (err) {
         console.error("Erro ao buscar cotações:", err)
-        setError(err.message)
+        setError(err.message || "Erro ao carregar cotações")
       } finally {
         setLoading(false)
       }
