@@ -1,4 +1,5 @@
 "use client"
+
 import { Dialog } from "@/components/ui/dialog"
 import { Header } from "@/components/layout/header"
 import { FilterSidebar } from "@/components/marketplace/filter-sidebar"

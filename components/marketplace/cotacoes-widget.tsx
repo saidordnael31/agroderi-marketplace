@@ -80,12 +80,14 @@ export function CotacoesWidget() {
 
   return (
     <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader>
         <CardTitle className="text-green-800 flex items-center gap-2">
           <TrendingUp className="h-5 w-5" />
           <span>Cotações do Dia</span>
+          <Badge className="ml-auto bg-green-100 text-green-800 border-green-200">
+            {new Date().toLocaleDateString("pt-BR")}
+          </Badge>
         </CardTitle>
-        <Badge className="bg-green-100 text-green-800 border-green-200">{new Date().toLocaleDateString("pt-BR")}</Badge>
       </CardHeader>
       <CardContent>
         {cotacoesFiltradas.length > 0 ? (

@@ -83,10 +83,7 @@ export async function POST() {
     ]
 
     // Inserir dados na tabela
-    const { data, error } = await supabase
-      .from("cotacoes")
-      .upsert(cotacoesData, { onConflict: "produto,local,data_coleta" })
-      .select()
+    const { error } = await supabase.from("cotacoes").upsert(cotacoesData, { onConflict: "produto,local,data_coleta" })
 
     if (error) {
       throw error
