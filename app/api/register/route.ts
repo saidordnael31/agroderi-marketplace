@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     console.log("📝 Dados recebidos no proxy:", body)
 
     // URL do servidor externo
-    const externalApiUrl = "http://195.200.4.239/api/users/register/"
+    const externalApiUrl = "https://api.agroderivative.tech/api/users/register/"
 
     console.log("🔗 Fazendo requisição para:", externalApiUrl)
 
