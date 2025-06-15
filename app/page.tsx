@@ -335,7 +335,7 @@ export default function AgroDeriLanding() {
       // Usar a rota interna do Next.js (sem CORS)
 
     try {
-        const response = await fetch('http://195.200.4.239/api/users/register/', {
+        const response = await fetch('https://api.agroderivative.tech/api/users/register/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
