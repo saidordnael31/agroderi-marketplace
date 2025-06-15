@@ -28,8 +28,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react"
-import { maskCPF, maskRG, maskPhone, unmaskValue } from "@/utils/input-masks"
-import { API_CONFIG, buildApiUrl, apiRequest } from "@/config/api"
+import { maskCPF, maskRG, maskPhone, maskDate, validateDate, unmaskValue } from "@/utils/input-masks"
 
 export default function AgroDeriLanding() {
   const [showCheckout, setShowCheckout] = useState(false)
@@ -42,6 +41,7 @@ export default function AgroDeriLanding() {
     phone: "",
     cpf: "",
     rg: "",
+    birthday: "", // Adicionar este campo
     password: "",
     confirmPassword: "",
   })
@@ -55,6 +55,7 @@ export default function AgroDeriLanding() {
     phone: "",
     cpf: "",
     rg: "",
+    birthday: "", // Adicionar este campo
     amount: "",
     password: "",
     confirmPassword: "",
@@ -253,6 +254,7 @@ export default function AgroDeriLanding() {
       phone: "",
       cpf: "",
       rg: "",
+      birthday: "", // Adicionar este campo
       amount: "",
       password: "",
       confirmPassword: "",
@@ -300,6 +302,12 @@ export default function AgroDeriLanding() {
       errors.rg = "RG deve ter pelo menos 7 caracteres"
     }
 
+    if (!userData.birthday.trim()) {
+      errors.birthday = "Data de nascimento é obrigatória"
+    } else if (!validateDate(userData.birthday)) {
+      errors.birthday = "Data de nascimento inválida"
+    }
+
     if (!amount || amount < 50) {
       errors.amount = "Valor mínimo de investimento é R$ 50"
     }
@@ -328,37 +336,38 @@ export default function AgroDeriLanding() {
         cpf: unmaskValue(userData.cpf),
         whatsapp: unmaskValue(userData.phone),
         rg: unmaskValue(userData.rg),
+        birthday: userData.birthday, // Adicionar este campo no formato DD/MM/AAAA
       }
 
       console.log("📝 Dados de registro:", registrationData)
 
       // Usar a rota interna do Next.js (sem CORS)
 
-    try {
-        const response = await fetch('https://api.agroderivative.tech/api/users/register/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(registrationData)
-        });
+      try {
+        const response = await fetch("https://api.agroderivative.tech/api/users/register/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(registrationData),
+        })
 
-        const result = await response.json();
+        const result = await response.json()
 
-        if (response.ok) { // Status 2xx
-            console.log('Usuário registrado com sucesso!', result);
-            alert('Registro bem-sucedido!');
-            // Redirecionar para a página de login, por exemplo
+        if (response.ok) {
+          // Status 2xx
+          console.log("Usuário registrado com sucesso!", result)
+          alert("Registro bem-sucedido!")
+          // Redirecionar para a página de login, por exemplo
         } else {
-            console.error('Erro no registro:', result);
-            alert('Erro no registro: ' + (result.error || JSON.stringify(result)));
+          console.error("Erro no registro:", result)
+          alert("Erro no registro: " + (result.error || JSON.stringify(result)))
         }
-    } catch (error) {
-        console.error('Erro de rede ou inesperado:', error);
-        alert('Erro de conexão. Tente novamente.');
-    }
-
+      } catch (error) {
+        console.error("Erro de rede ou inesperado:", error)
+        alert("Erro de conexão. Tente novamente.")
+      }
     } catch (error) {
       console.error("💥 Erro geral:", error)
       alert("Erro inesperado. Tente novamente.")
@@ -375,6 +384,7 @@ export default function AgroDeriLanding() {
       phone: "",
       cpf: "",
       rg: "",
+      birthday: "", // Adicionar este campo
       amount: "",
       password: "",
       confirmPassword: "",
@@ -407,6 +417,10 @@ export default function AgroDeriLanding() {
     }
     if (data.last_name && !backendErrors.name) {
       backendErrors.name = Array.isArray(data.last_name) ? data.last_name[0] : data.last_name
+    }
+
+    if (data.birthday) {
+      backendErrors.birthday = Array.isArray(data.birthday) ? data.birthday[0] : data.birthday
     }
 
     // Se houver erro geral não mapeado
@@ -463,6 +477,9 @@ export default function AgroDeriLanding() {
         break
       case "confirmPassword":
         setUserData({ ...userData, confirmPassword: value })
+        break
+      case "birthday":
+        setUserData({ ...userData, birthday: maskDate(value) })
         break
       default:
         setUserData({ ...userData, [field]: value })
@@ -865,6 +882,20 @@ export default function AgroDeriLanding() {
                       className={formErrors.email ? "border-red-500" : ""}
                     />
                     {formErrors.email && <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="birthday">Data de Nascimento *</Label>
+                    <Input
+                      id="birthday"
+                      placeholder="DD/MM/AAAA"
+                      value={userData.birthday}
+                      onChange={(e) => handleInputChange("birthday", e.target.value)}
+                      className={formErrors.birthday ? "border-red-500" : ""}
+                      maxLength={10}
+                    />
+                    {formErrors.birthday && <p className="text-red-500 text-sm mt-1">{formErrors.birthday}</p>}
+                    <p className="text-xs text-gray-500 mt-1">Formato: DD/MM/AAAA</p>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
