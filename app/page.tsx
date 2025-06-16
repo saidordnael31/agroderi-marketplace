@@ -41,7 +41,7 @@ export default function AgroDeriLanding() {
     phone: "",
     cpf: "",
     rg: "",
-    birthday: "", // Adicionar este campo
+    birthday: "",
     password: "",
     confirmPassword: "",
   })
@@ -49,13 +49,14 @@ export default function AgroDeriLanding() {
   const [loading, setLoading] = useState(false)
   const [pixCode, setPixCode] = useState("")
   const [qrCodeUrl, setQrCodeUrl] = useState("")
+  const [paymentString, setPaymentString] = useState("") // Adicionar este estado
   const [formErrors, setFormErrors] = useState({
     name: "",
     email: "",
     phone: "",
     cpf: "",
     rg: "",
-    birthday: "", // Adicionar este campo
+    birthday: "",
     amount: "",
     password: "",
     confirmPassword: "",
@@ -169,17 +170,56 @@ export default function AgroDeriLanding() {
 
   const steps = ["Pacote", "Dados", "PIX", "Confirmação"]
 
-  // Gerar QR Code quando chegar no step 2.5
+  // Gerar QR Code PIX real quando chegar no step 2.5
   useEffect(() => {
     if (currentStep === 2.5) {
-      generatePixCode()
+      generateRealPixCode()
     }
-  }, [currentStep, amount, userData.email])
+  }, [currentStep, amount, userData.cpf])
 
-  const generatePixCode = async () => {
-    // Gerar código PIX simulado
+  const generateRealPixCode = async () => {
+    try {
+      setLoading(true)
+      console.log("🔄 Gerando PIX real...")
+
+      const response = await fetch("/api/generate-pix/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          value: amount,
+          cpf: unmaskValue(userData.cpf), // Remove a máscara do CPF
+        }),
+      })
+
+      const result = await response.json()
+      console.log("📦 Resposta da API PIX:", result)
+
+      if (response.ok && result.success) {
+        setQrCodeUrl(result.qrCode)
+        setPaymentString(result.paymentString)
+        console.log("✅ PIX gerado com sucesso!")
+      } else {
+        console.error("❌ Erro ao gerar PIX:", result)
+        alert("Erro ao gerar PIX: " + (result.error || "Erro desconhecido"))
+        // Fallback para o PIX simulado em caso de erro
+        generateFallbackPixCode()
+      }
+    } catch (error) {
+      console.error("💥 Erro na geração do PIX:", error)
+      alert("Erro de conexão ao gerar PIX. Usando código de exemplo.")
+      // Fallback para o PIX simulado em caso de erro
+      generateFallbackPixCode()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const generateFallbackPixCode = () => {
+    // PIX simulado como fallback
     const pixCodeGenerated = `00020126580014br.gov.bcb.pix0136${userData.email.replace("@", "").replace(".", "")}520400005303986540${amount.toFixed(2)}5802BR5925AGRODERI TECNOLOGIA LTDA6009SAO PAULO62070503***6304ABCD`
-    setPixCode(pixCodeGenerated)
+    setPaymentString(pixCodeGenerated)
 
     // Gerar QR Code usando API externa
     const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(pixCodeGenerated)}`
@@ -188,11 +228,11 @@ export default function AgroDeriLanding() {
 
   const copyPixCode = async () => {
     try {
-      await navigator.clipboard.writeText(pixCode)
-      // Aqui você pode adicionar um toast de sucesso
+      await navigator.clipboard.writeText(paymentString)
       alert("Código PIX copiado!")
     } catch (err) {
       console.error("Erro ao copiar:", err)
+      alert("Erro ao copiar código PIX")
     }
   }
 
@@ -254,7 +294,7 @@ export default function AgroDeriLanding() {
       phone: "",
       cpf: "",
       rg: "",
-      birthday: "", // Adicionar este campo
+      birthday: "",
       amount: "",
       password: "",
       confirmPassword: "",
@@ -336,12 +376,10 @@ export default function AgroDeriLanding() {
         cpf: unmaskValue(userData.cpf),
         whatsapp: unmaskValue(userData.phone),
         rg: unmaskValue(userData.rg),
-        birthday: userData.birthday, // Adicionar este campo no formato DD/MM/AAAA
+        birthday: userData.birthday,
       }
 
       console.log("📝 Dados de registro:", registrationData)
-
-      // Usar a rota interna do Next.js (sem CORS)
 
       try {
         const response = await fetch("https://api.agroderivative.tech/api/users/register/", {
@@ -356,16 +394,16 @@ export default function AgroDeriLanding() {
         const result = await response.json()
 
         if (response.ok) {
-          // Status 2xx
-          console.log("Usuário registrado com sucesso!", result)
+          console.log("✅ Usuário registrado com sucesso!", result)
           alert("Registro bem-sucedido!")
-          // Redirecionar para a página de login, por exemplo
+          // Avançar para o próximo step (PIX)
+          setCurrentStep(2)
         } else {
-          console.error("Erro no registro:", result)
-          alert("Erro no registro: " + (result.error || JSON.stringify(result)))
+          console.error("❌ Erro no registro:", result)
+          handleRegistrationErrors(result)
         }
       } catch (error) {
-        console.error("Erro de rede ou inesperado:", error)
+        console.error("🌐 Erro de rede:", error)
         alert("Erro de conexão. Tente novamente.")
       }
     } catch (error) {
@@ -384,7 +422,7 @@ export default function AgroDeriLanding() {
       phone: "",
       cpf: "",
       rg: "",
-      birthday: "", // Adicionar este campo
+      birthday: "",
       amount: "",
       password: "",
       confirmPassword: "",
@@ -1046,7 +1084,7 @@ export default function AgroDeriLanding() {
               </Card>
             )}
 
-            {/* Step 2.5: QR Code PIX */}
+            {/* Step 2.5: QR Code PIX Real */}
             {currentStep === 2.5 && (
               <Card className="max-w-2xl mx-auto">
                 <CardHeader className="text-center">
@@ -1057,9 +1095,16 @@ export default function AgroDeriLanding() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="bg-white border-2 border-gray-200 rounded-lg p-8 text-center">
-                    {/* QR Code Real */}
+                    {/* QR Code Real da API */}
                     <div className="w-64 h-64 mx-auto mb-4 flex items-center justify-center">
-                      {qrCodeUrl ? (
+                      {loading ? (
+                        <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                          <div className="text-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">Gerando PIX...</p>
+                          </div>
+                        </div>
+                      ) : qrCodeUrl ? (
                         <img
                           src={qrCodeUrl || "/placeholder.svg"}
                           alt="QR Code PIX"
@@ -1067,7 +1112,7 @@ export default function AgroDeriLanding() {
                         />
                       ) : (
                         <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                          <p className="text-sm text-gray-500">Erro ao carregar QR Code</p>
                         </div>
                       )}
                     </div>
@@ -1076,9 +1121,15 @@ export default function AgroDeriLanding() {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600 mb-2">Código PIX Copia e Cola:</p>
                         <div className="bg-white border rounded p-3 text-xs font-mono break-all max-h-20 overflow-y-auto">
-                          {pixCode}
+                          {paymentString || "Carregando código PIX..."}
                         </div>
-                        <Button variant="outline" size="sm" className="w-full mt-2" onClick={copyPixCode}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={copyPixCode}
+                          disabled={!paymentString}
+                        >
                           <Copy className="mr-2 h-4 w-4" />
                           Copiar Código PIX
                         </Button>
@@ -1089,7 +1140,10 @@ export default function AgroDeriLanding() {
                           <strong>Valor:</strong> R$ {amount.toLocaleString()}
                         </p>
                         <p className="text-sm text-gray-600">
-                          <strong>Beneficiário:</strong> Brasil Bitcoin - AgroDeri Tecnologia Ltda
+                          <strong>CPF:</strong> {userData.cpf}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <strong>Beneficiário:</strong> AgroDeri Tecnologia Ltda
                         </p>
                       </div>
                     </div>
