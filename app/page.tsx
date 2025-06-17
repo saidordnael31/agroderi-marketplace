@@ -49,7 +49,9 @@ export default function AgroDeriLanding() {
   const [loading, setLoading] = useState(false)
   const [pixCode, setPixCode] = useState("")
   const [qrCodeUrl, setQrCodeUrl] = useState("")
-  const [paymentString, setPaymentString] = useState("") // Adicionar este estado
+  const [paymentString, setPaymentString] = useState("")
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false)
+  const [pollingActive, setPollingActive] = useState(false)
   const [formErrors, setFormErrors] = useState({
     name: "",
     email: "",
@@ -64,6 +66,7 @@ export default function AgroDeriLanding() {
 
   const checkoutRef = useRef<HTMLDivElement>(null)
   const qrCodeRef = useRef<HTMLCanvasElement>(null)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -177,6 +180,79 @@ export default function AgroDeriLanding() {
     }
   }, [currentStep, amount, userData.cpf])
 
+  // Iniciar polling quando QR Code for gerado
+  useEffect(() => {
+    if (currentStep === 2.5 && paymentString && !paymentConfirmed && !pollingActive) {
+      startPaymentPolling()
+    }
+
+    // Limpar polling quando sair da tela ou pagamento confirmado
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+    }
+  }, [currentStep, qrCodeUrl, paymentConfirmed, pollingActive])
+
+  const startPaymentPolling = () => {
+    console.log("🔄 Iniciando polling do pagamento...")
+    setPollingActive(true)
+
+    // Verificar imediatamente
+    checkPaymentStatus()
+
+    // Configurar polling a cada 5 segundos
+    pollingIntervalRef.current = setInterval(() => {
+      checkPaymentStatus()
+    }, 5000)
+  }
+
+  const stopPaymentPolling = () => {
+    console.log("⏹️ Parando polling do pagamento...")
+    setPollingActive(false)
+
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+  }
+
+  const checkPaymentStatus = async () => {
+    try {
+      console.log("🔍 Verificando status do pagamento...")
+
+      const response = await fetch("/api/check-payment-status/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cpf: unmaskValue(userData.cpf),
+        }),
+      })
+
+      const result = await response.json()
+      console.log("📊 Status do pagamento:", result)
+
+      if (result.success && result.confirmed) {
+        console.log("✅ Pagamento confirmado! Avançando para próximo step...")
+        setPaymentConfirmed(true)
+        stopPaymentPolling()
+
+        // Avançar para tela de confirmação após 2 segundos
+        setTimeout(() => {
+          setCurrentStep(3)
+        }, 2000)
+      } else {
+        console.log("⏳ Pagamento ainda pendente...")
+      }
+    } catch (error) {
+      console.error("❌ Erro ao verificar status do pagamento:", error)
+      // Não parar o polling em caso de erro de rede
+    }
+  }
+
   const generateRealPixCode = async () => {
     try {
       setLoading(true)
@@ -189,7 +265,7 @@ export default function AgroDeriLanding() {
         },
         body: JSON.stringify({
           value: amount,
-          cpf: unmaskValue(userData.cpf), // Remove a máscara do CPF
+          cpf: unmaskValue(userData.cpf),
         }),
       })
 
@@ -200,16 +276,16 @@ export default function AgroDeriLanding() {
         setQrCodeUrl(result.qrCode)
         setPaymentString(result.paymentString)
         console.log("✅ PIX gerado com sucesso!")
+        console.log("🖼️ QR Code URL:", result.qrCode)
+        console.log("💳 Payment String:", result.paymentString)
       } else {
         console.error("❌ Erro ao gerar PIX:", result)
         alert("Erro ao gerar PIX: " + (result.error || "Erro desconhecido"))
-        // Fallback para o PIX simulado em caso de erro
         generateFallbackPixCode()
       }
     } catch (error) {
       console.error("💥 Erro na geração do PIX:", error)
       alert("Erro de conexão ao gerar PIX. Usando código de exemplo.")
-      // Fallback para o PIX simulado em caso de erro
       generateFallbackPixCode()
     } finally {
       setLoading(false)
@@ -217,11 +293,9 @@ export default function AgroDeriLanding() {
   }
 
   const generateFallbackPixCode = () => {
-    // PIX simulado como fallback
     const pixCodeGenerated = `00020126580014br.gov.bcb.pix0136${userData.email.replace("@", "").replace(".", "")}520400005303986540${amount.toFixed(2)}5802BR5925AGRODERI TECNOLOGIA LTDA6009SAO PAULO62070503***6304ABCD`
     setPaymentString(pixCodeGenerated)
 
-    // Gerar QR Code usando API externa
     const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(pixCodeGenerated)}`
     setQrCodeUrl(qrCodeApiUrl)
   }
@@ -282,7 +356,6 @@ export default function AgroDeriLanding() {
   }
 
   const validatePassword = (password: string) => {
-    // Pelo menos 8 caracteres, 1 maiúscula, 1 minúscula, 1 número
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/
     return passwordRegex.test(password)
   }
@@ -348,7 +421,7 @@ export default function AgroDeriLanding() {
       errors.birthday = "Data de nascimento inválida"
     }
 
-    if (!amount || amount < 50) {
+    if (!amount || amount < 1) {
       errors.amount = "Valor mínimo de investimento é R$ 50"
     }
 
@@ -360,12 +433,10 @@ export default function AgroDeriLanding() {
     try {
       setLoading(true)
 
-      // Separar nome completo em primeiro e último nome
       const nameParts = userData.name.trim().split(" ")
       const firstName = nameParts[0]
       const lastName = nameParts.slice(1).join(" ") || firstName
 
-      // Preparar dados para envio (removendo máscaras)
       const registrationData = {
         username: userData.email,
         email: userData.email,
@@ -396,7 +467,6 @@ export default function AgroDeriLanding() {
         if (response.ok) {
           console.log("✅ Usuário registrado com sucesso!", result)
           alert("Registro bem-sucedido!")
-          // Avançar para o próximo step (PIX)
           setCurrentStep(2)
         } else {
           console.error("❌ Erro no registro:", result)
@@ -414,7 +484,6 @@ export default function AgroDeriLanding() {
     }
   }
 
-  // Função separada para tratar erros de registro
   const handleRegistrationErrors = (data: any) => {
     const backendErrors = {
       name: "",
@@ -428,7 +497,6 @@ export default function AgroDeriLanding() {
       confirmPassword: "",
     }
 
-    // Mapear erros do backend para os campos do formulário
     if (data.email) {
       backendErrors.email = Array.isArray(data.email) ? data.email[0] : data.email
     }
@@ -461,7 +529,6 @@ export default function AgroDeriLanding() {
       backendErrors.birthday = Array.isArray(data.birthday) ? data.birthday[0] : data.birthday
     }
 
-    // Se houver erro geral não mapeado
     if (data.non_field_errors) {
       alert(Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors)
     }
@@ -474,10 +541,8 @@ export default function AgroDeriLanding() {
       if (!validateForm()) {
         return
       }
-
-      // Fazer requisição para registrar usuário
       await registerUser()
-      return // A função registerUser já gerencia o próximo step
+      return
     }
 
     if (currentStep < 3) {
@@ -487,6 +552,10 @@ export default function AgroDeriLanding() {
 
   const handleBack = () => {
     if (currentStep > 0) {
+      // Parar polling se estiver voltando da tela de PIX
+      if (currentStep === 2.5) {
+        stopPaymentPolling()
+      }
       setCurrentStep(currentStep - 1)
     }
   }
@@ -1084,7 +1153,7 @@ export default function AgroDeriLanding() {
               </Card>
             )}
 
-            {/* Step 2.5: QR Code PIX Real */}
+            {/* Step 2.5: QR Code PIX Real com Polling */}
             {currentStep === 2.5 && (
               <Card className="max-w-2xl mx-auto">
                 <CardHeader className="text-center">
@@ -1109,6 +1178,13 @@ export default function AgroDeriLanding() {
                           src={qrCodeUrl || "/placeholder.svg"}
                           alt="QR Code PIX"
                           className="w-full h-full object-contain border rounded-lg"
+                          onError={(e) => {
+                            console.error("❌ Erro ao carregar QR Code:", qrCodeUrl)
+                            e.target.src = "/placeholder.svg?height=256&width=256&text=Erro+ao+carregar+QR+Code"
+                          }}
+                          onLoad={() => {
+                            console.log("✅ QR Code carregado com sucesso!")
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
@@ -1149,27 +1225,58 @@ export default function AgroDeriLanding() {
                     </div>
                   </div>
 
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-yellow-800 text-xs">!</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-yellow-800 mb-1">Aguardando pagamento</p>
-                        <p className="text-yellow-700">
-                          Após o pagamento, você receberá a confirmação automaticamente e seu contrato será gerado.
-                        </p>
+                  {/* Status do Pagamento */}
+                  {paymentConfirmed ? (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
+                          <CheckCircle className="h-3 w-3 text-white" />
+                        </div>
+                        <div className="text-sm">
+                          <p className="font-medium text-green-800 mb-1">✅ Pagamento Confirmado!</p>
+                          <p className="text-green-700">
+                            Seu pagamento foi processado com sucesso. Redirecionando para confirmação...
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center mt-0.5">
+                          {pollingActive ? (
+                            <Loader2 className="h-3 w-3 text-yellow-800 animate-spin" />
+                          ) : (
+                            <span className="text-yellow-800 text-xs">!</span>
+                          )}
+                        </div>
+                        <div className="text-sm">
+                          <p className="font-medium text-yellow-800 mb-1">
+                            {pollingActive ? "🔍 Verificando pagamento..." : "⏳ Aguardando pagamento"}
+                          </p>
+                          <p className="text-yellow-700">
+                            {pollingActive
+                              ? "Estamos verificando seu pagamento automaticamente. Não feche esta página."
+                              : "Após o pagamento, você receberá a confirmação automaticamente."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-4">
-                    <Button variant="outline" onClick={() => setCurrentStep(2)} className="flex-1">
+                    <Button variant="outline" onClick={handleBack} className="flex-1" disabled={paymentConfirmed}>
                       Voltar
                     </Button>
-                    <Button onClick={() => setCurrentStep(3)} className="flex-1">
-                      Já paguei
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                    <Button onClick={() => setCurrentStep(3)} className="flex-1" disabled={!paymentConfirmed}>
+                      {paymentConfirmed ? (
+                        <>
+                          Continuar
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      ) : (
+                        "Aguardando pagamento..."
+                      )}
                     </Button>
                   </div>
                 </CardContent>

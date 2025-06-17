@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
 
     console.log("📝 Dados recebidos para gerar PIX:", { value, cpf })
 
-    // URL da API externa - ENDPOINT CORRETO
+    // URL da API externa
     const externalApiUrl = "https://api.agroderivative.tech/api/generate-fiat-deposit-qrcode/"
 
     console.log("🔗 Fazendo requisição para:", externalApiUrl)
@@ -37,15 +37,6 @@ export async function POST(request: NextRequest) {
 
     const responseData = await response.json()
     console.log("📦 Dados da resposta externa:", responseData)
-
-    // Verificar se a resposta tem os campos esperados
-    if (responseData.success && responseData.qrCode && responseData.paymentString) {
-      console.log("✅ PIX gerado com sucesso!")
-      console.log("🔗 QR Code recebido:", responseData.qrCode ? "✅" : "❌")
-      console.log("💳 Payment String recebida:", responseData.paymentString ? "✅" : "❌")
-    } else {
-      console.log("⚠️ Resposta da API não contém todos os campos esperados")
-    }
 
     // Retornar a resposta com o mesmo status
     return NextResponse.json(responseData, { status: response.status })
