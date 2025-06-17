@@ -34,18 +34,44 @@ export async function POST(request: NextRequest) {
     })
 
     console.log("📊 Status da resposta externa:", response.status)
+    console.log("📊 Headers da resposta:", Object.fromEntries(response.headers.entries()))
 
     const responseData = await response.json()
-    console.log("📦 Dados da resposta externa:", responseData)
+    console.log("📦 Dados da resposta externa completos:", JSON.stringify(responseData, null, 2))
 
-    // Retornar a resposta com o mesmo status
-    return NextResponse.json(responseData, { status: response.status })
+    if (response.ok) {
+      // Verificar se os campos necessários estão presentes
+      console.log("🔍 Verificando campos da resposta:")
+      console.log("- qrCode:", responseData.qrCode ? "✅ Presente" : "❌ Ausente")
+
+      console.log("- paymentString:", responseData.paymentString ? "✅ Presente" : "❌ Ausente")
+
+      // Retornar resposta padronizada
+      return NextResponse.json(
+        {
+          success: true,
+          qrCode:`data:image/png;base64,${responseData.qrCode}`,
+          paymentString:
+            responseData.paymentString ||
+            responseData.payment_string ||
+            responseData.pix_code ||
+            responseData.code ||
+            null,
+          originalData: responseData,
+        },
+        { status: 200 },
+      )
+    } else {
+      console.error("❌ Erro na API externa:", responseData)
+      return NextResponse.json(responseData, { status: response.status })
+    }
   } catch (error) {
     console.error("❌ Erro no proxy de geração PIX:", error)
 
     // Retornar erro detalhado
     return NextResponse.json(
       {
+        success: false,
         error: "Erro interno do servidor",
         details: error.message,
         type: "pix_generation_error",

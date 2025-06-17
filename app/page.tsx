@@ -20,7 +20,6 @@ import {
   Target,
   Coins,
   BarChart3,
-  FileText,
   Loader2,
   ArrowRight,
   Clock,
@@ -52,6 +51,11 @@ export default function AgroDeriLanding() {
   const [paymentString, setPaymentString] = useState("")
   const [paymentConfirmed, setPaymentConfirmed] = useState(false)
   const [pollingActive, setPollingActive] = useState(false)
+  // Adicionar novos estados após os estados existentes
+  const [contractCreated, setContractCreated] = useState(false)
+  const [contractData, setContractData] = useState(null)
+  const [documentIdClicksign, setDocumentIdClicksign] = useState("")
+  const [contractDownloadUrl, setContractDownloadUrl] = useState("")
   const [formErrors, setFormErrors] = useState({
     name: "",
     email: "",
@@ -218,6 +222,110 @@ export default function AgroDeriLanding() {
     }
   }
 
+  // Adicionar nova função para criar signatário após a função createContractDocument
+
+  const addSignerToContract = async () => {
+    try {
+      console.log("✍️ Adicionando signatário ao contrato...")
+
+      const response = await fetch("/api/add-signer/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userData: userData,
+        }),
+      })
+
+      const result = await response.json()
+      console.log("✍️ Resultado da adição do signatário:", result)
+
+      if (result.success) {
+        console.log("✅ Signatário adicionado com sucesso!")
+        return true
+      } else {
+        console.error("❌ Erro ao adicionar signatário:", result)
+        alert("Erro ao adicionar signatário: " + (result.error || "Erro desconhecido"))
+        return false
+      }
+    } catch (error) {
+      console.error("💥 Erro na adição do signatário:", error)
+      alert("Erro de conexão ao adicionar signatário.")
+      return false
+    }
+  }
+
+  // Modificar a função createContractDocument para extrair os dados da resposta
+  const createContractDocument = async () => {
+    try {
+      console.log("📄 Criando documento de contrato...")
+      setLoading(true)
+
+      const response = await fetch("/api/create-contract-document/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userData: userData,
+          amount: amount,
+        }),
+      })
+
+      const result = await response.json()
+      console.log("📄 Resultado da criação do contrato:", result)
+
+      if (result.success) {
+        console.log("✅ Contrato criado com sucesso!")
+        setContractCreated(true)
+        setContractData(result.contractData)
+
+        // Extrair document_id_clicksign e link de download
+        if (result.document && result.document.document_id_clicksign) {
+          setDocumentIdClicksign(result.document.document_id_clicksign)
+          console.log("📋 Document ID Clicksign:", result.document.document_id_clicksign)
+        }
+
+        // Extrair link de download do arquivo original
+        if (
+          result.document &&
+          result.document.clicksign_response &&
+          result.document.clicksign_response.data &&
+          result.document.clicksign_response.data.links &&
+          result.document.clicksign_response.data.links.files &&
+          result.document.clicksign_response.data.links.files.original
+        ) {
+          const downloadUrl = result.document.clicksign_response.data.links.files.original
+          setContractDownloadUrl(downloadUrl)
+          console.log("📥 URL de download do contrato:", downloadUrl)
+        }
+
+        // Adicionar signatário após criar o documento
+        console.log("📄 Adicionando signatário ao contrato...")
+        const signerSuccess = await addSignerToContract()
+
+        if (signerSuccess) {
+          console.log("✅ Processo completo: documento criado e signatário adicionado!")
+          return true
+        } else {
+          console.log("⚠️ Documento criado, mas erro ao adicionar signatário")
+          return true // Continuar mesmo se houver erro no signatário
+        }
+      } else {
+        console.error("❌ Erro ao criar contrato:", result)
+        alert("Erro ao criar contrato: " + (result.error || "Erro desconhecido"))
+        return false
+      }
+    } catch (error) {
+      console.error("💥 Erro na criação do contrato:", error)
+      alert("Erro de conexão ao criar contrato.")
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const checkPaymentStatus = async () => {
     try {
       console.log("🔍 Verificando status do pagamento...")
@@ -236,14 +344,19 @@ export default function AgroDeriLanding() {
       console.log("📊 Status do pagamento:", result)
 
       if (result.success && result.confirmed) {
-        console.log("✅ Pagamento confirmado! Avançando para próximo step...")
+        console.log("✅ Pagamento confirmado! Criando contrato...")
         setPaymentConfirmed(true)
         stopPaymentPolling()
 
-        // Avançar para tela de confirmação após 2 segundos
-        setTimeout(() => {
-          setCurrentStep(3)
-        }, 2000)
+        // Criar documento de contrato
+        const contractSuccess = await createContractDocument()
+
+        if (contractSuccess) {
+          // Avançar para tela de confirmação após 2 segundos
+          setTimeout(() => {
+            setCurrentStep(3)
+          }, 2000)
+        }
       } else {
         console.log("⏳ Pagamento ainda pendente...")
       }
@@ -269,15 +382,60 @@ export default function AgroDeriLanding() {
         }),
       })
 
+      console.log("📊 Status da resposta:", response.status)
+
       const result = await response.json()
-      console.log("📦 Resposta da API PIX:", result)
+      console.log("📦 Resposta completa da API PIX:", JSON.stringify(result, null, 2))
 
       if (response.ok && result.success) {
-        setQrCodeUrl(result.qrCode)
-        setPaymentString(result.paymentString)
         console.log("✅ PIX gerado com sucesso!")
-        console.log("🖼️ QR Code URL:", result.qrCode)
-        console.log("💳 Payment String:", result.paymentString)
+
+        // Verificar se temos QR Code
+        if (result.qrCode) {
+          console.log("🖼️ QR Code encontrado:", result.qrCode)
+          setQrCodeUrl(result.qrCode)
+        } else {
+          console.log("⚠️ QR Code não encontrado na resposta, gerando fallback...")
+          generateFallbackPixCode()
+        }
+
+        // Verificar se temos Payment String
+        if (result.paymentString) {
+          console.log("💳 Payment String encontrada:", result.paymentString.substring(0, 50) + "...")
+          setPaymentString(result.paymentString)
+        } else {
+          console.log("⚠️ Payment String não encontrada na resposta")
+          // Usar dados originais se disponível
+          if (result.originalData) {
+            console.log("🔍 Tentando extrair dados da resposta original...")
+            const originalData = result.originalData
+
+            // Tentar diferentes campos possíveis
+            const possibleQrFields = ["qrCode", "qr_code", "qr", "qrcode"]
+            const possibleStringFields = ["paymentString", "payment_string", "pix_code", "code", "pix"]
+
+            for (const field of possibleQrFields) {
+              if (originalData[field]) {
+                console.log(`📸 QR Code encontrado em ${field}:`, originalData[field])
+                setQrCodeUrl(originalData[field])
+                break
+              }
+            }
+
+            for (const field of possibleStringFields) {
+              if (originalData[field]) {
+                console.log(`💳 Payment String encontrada em ${field}:`, originalData[field].substring(0, 50) + "...")
+                setPaymentString(originalData[field])
+                break
+              }
+            }
+          }
+
+          // Se ainda não temos dados, usar fallback
+          if (!paymentString) {
+            generateFallbackPixCode()
+          }
+        }
       } else {
         console.error("❌ Erro ao gerar PIX:", result)
         alert("Erro ao gerar PIX: " + (result.error || "Erro desconhecido"))
@@ -293,11 +451,19 @@ export default function AgroDeriLanding() {
   }
 
   const generateFallbackPixCode = () => {
+    console.log("🔄 Gerando PIX de fallback...")
+
+    // PIX simulado como fallback
     const pixCodeGenerated = `00020126580014br.gov.bcb.pix0136${userData.email.replace("@", "").replace(".", "")}520400005303986540${amount.toFixed(2)}5802BR5925AGRODERI TECNOLOGIA LTDA6009SAO PAULO62070503***6304ABCD`
     setPaymentString(pixCodeGenerated)
 
+    console.log("💳 PIX de fallback gerado:", pixCodeGenerated.substring(0, 50) + "...")
+
+    // Gerar QR Code usando API externa
     const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(pixCodeGenerated)}`
     setQrCodeUrl(qrCodeApiUrl)
+
+    console.log("🖼️ QR Code de fallback gerado:", qrCodeApiUrl)
   }
 
   const copyPixCode = async () => {
@@ -1174,21 +1340,41 @@ export default function AgroDeriLanding() {
                           </div>
                         </div>
                       ) : qrCodeUrl ? (
-                        <img
-                          src={qrCodeUrl || "/placeholder.svg"}
-                          alt="QR Code PIX"
-                          className="w-full h-full object-contain border rounded-lg"
-                          onError={(e) => {
-                            console.error("❌ Erro ao carregar QR Code:", qrCodeUrl)
-                            e.target.src = "/placeholder.svg?height=256&width=256&text=Erro+ao+carregar+QR+Code"
-                          }}
-                          onLoad={() => {
-                            console.log("✅ QR Code carregado com sucesso!")
-                          }}
-                        />
+                        <div className="w-full h-full relative">
+                          <img
+                            src={qrCodeUrl || "/placeholder.svg"}
+                            alt="QR Code PIX"
+                            className="w-full h-full object-contain border rounded-lg"
+                            onError={(e) => {
+                              console.error("❌ Erro ao carregar QR Code:", qrCodeUrl)
+                              console.error("❌ Evento de erro:", e)
+                              e.target.src = "/placeholder.svg?height=256&width=256&text=Erro+ao+carregar+QR+Code"
+                              e.target.style.backgroundColor = "#f3f4f6"
+                            }}
+                            onLoad={() => {
+                              console.log("✅ QR Code carregado com sucesso!")
+                            }}
+                          />
+                          {/* Debug info */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg">
+                            URL: {qrCodeUrl.substring(0, 30)}...
+                          </div>
+                        </div>
                       ) : (
                         <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                          <p className="text-sm text-gray-500">Erro ao carregar QR Code</p>
+                          <div className="text-center">
+                            <p className="text-sm text-gray-500 mb-2">QR Code não disponível</p>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                console.log("🔄 Tentando gerar PIX novamente...")
+                                generateRealPixCode()
+                              }}
+                            >
+                              Tentar Novamente
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1219,65 +1405,26 @@ export default function AgroDeriLanding() {
                           <strong>CPF:</strong> {userData.cpf}
                         </p>
                         <p className="text-sm text-gray-600">
-                          <strong>Beneficiário:</strong> AgroDeri Tecnologia Ltda
+                          <strong>Beneficiário:</strong> AgroDeri Tecnologia LTDA
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Status do Pagamento */}
-                  {paymentConfirmed ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
-                          <CheckCircle className="h-3 w-3 text-white" />
-                        </div>
-                        <div className="text-sm">
-                          <p className="font-medium text-green-800 mb-1">✅ Pagamento Confirmado!</p>
-                          <p className="text-green-700">
-                            Seu pagamento foi processado com sucesso. Redirecionando para confirmação...
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center mt-0.5">
-                          {pollingActive ? (
-                            <Loader2 className="h-3 w-3 text-yellow-800 animate-spin" />
-                          ) : (
-                            <span className="text-yellow-800 text-xs">!</span>
-                          )}
-                        </div>
-                        <div className="text-sm">
-                          <p className="font-medium text-yellow-800 mb-1">
-                            {pollingActive ? "🔍 Verificando pagamento..." : "⏳ Aguardando pagamento"}
-                          </p>
-                          <p className="text-yellow-700">
-                            {pollingActive
-                              ? "Estamos verificando seu pagamento automaticamente. Não feche esta página."
-                              : "Após o pagamento, você receberá a confirmação automaticamente."}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="flex gap-4">
-                    <Button variant="outline" onClick={handleBack} className="flex-1" disabled={paymentConfirmed}>
+                    <Button variant="outline" onClick={handleBack} className="flex-1">
                       Voltar
                     </Button>
-                    <Button onClick={() => setCurrentStep(3)} className="flex-1" disabled={!paymentConfirmed}>
-                      {paymentConfirmed ? (
-                        <>
-                          Continuar
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </>
-                      ) : (
-                        "Aguardando pagamento..."
-                      )}
-                    </Button>
+                    {paymentConfirmed ? (
+                      <Button className="flex-1 bg-green-600 text-white" disabled>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Pagamento Confirmado
+                      </Button>
+                    ) : (
+                      <Button className="flex-1" disabled>
+                        Aguardando Pagamento...
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1292,21 +1439,22 @@ export default function AgroDeriLanding() {
                   </div>
                   <CardTitle className="text-3xl text-green-600">Investimento Confirmado!</CardTitle>
                   <CardDescription className="text-lg">
-                    Enviamos seu contrato de mútuo por e-mail para assinatura digital. Verifique sua caixa de entrada e
-                    spam.
+                    Seu contrato foi criado com sucesso e está disponível para download e assinatura.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                     <div className="flex items-start gap-3">
                       <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs">📧</span>
+                        <span className="text-white text-xs">📄</span>
                       </div>
                       <div className="text-sm">
-                        <p className="font-medium text-blue-800 mb-1">Contrato enviado por e-mail</p>
+                        <p className="font-medium text-blue-800 mb-1">Contrato gerado com sucesso</p>
                         <p className="text-blue-700">
-                          Enviamos seu contrato de mútuo para <strong>{userData.email}</strong>. Você receberá um link
-                          da Clicksign para assinatura digital. Verifique também sua caixa de spam.
+                          Seu contrato de investimento foi criado e está pronto para download.
+                          {documentIdClicksign && (
+                            <span className="block mt-1 text-xs">ID do documento: {documentIdClicksign}</span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -1315,6 +1463,18 @@ export default function AgroDeriLanding() {
                   <div className="bg-green-50 p-6 rounded-lg">
                     <h3 className="font-semibold text-green-900 mb-4">Detalhes do seu investimento:</h3>
                     <div className="space-y-2 text-left">
+                      <div className="flex justify-between">
+                        <span>Investidor:</span>
+                        <span className="font-medium">{userData.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>CPF:</span>
+                        <span className="font-medium">{userData.cpf}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>E-mail:</span>
+                        <span className="font-medium">{userData.email}</span>
+                      </div>
                       <div className="flex justify-between">
                         <span>Valor investido:</span>
                         <span className="font-medium">R$ {amount.toLocaleString()}</span>
@@ -1331,10 +1491,22 @@ export default function AgroDeriLanding() {
                   </div>
 
                   <div className="space-y-4">
-                    <Button className="w-full">
-                      <FileText className="mr-2 h-4 w-4" />
-                      Visualizar Contrato
-                    </Button>
+                    {contractDownloadUrl && (
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => window.open(contractDownloadUrl, "_blank")}
+                      >
+                        <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        Baixar Contrato (DOCX)
+                      </Button>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <Button variant="outline">
@@ -1350,8 +1522,9 @@ export default function AgroDeriLanding() {
 
                   <div className="text-sm text-gray-600">
                     <p>
-                      Após a assinatura do contrato, você receberá acesso completo à plataforma AgroDeri. Bem-vindo à
-                      revolução do agro tokenizado!
+                      Seu contrato está disponível para download no formato DOCX. Após baixar, você pode revisar os
+                      termos e aguardar as próximas instruções para assinatura digital. Bem-vindo à revolução do agro
+                      tokenizado!
                     </p>
                   </div>
                 </CardContent>
@@ -1362,18 +1535,14 @@ export default function AgroDeriLanding() {
       )}
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sprout className="h-6 w-6 text-green-400" />
-            <span className="text-xl font-bold">AgroDeri</span>
-          </div>
-          <p className="text-gray-400 mb-4">Revolucionando o agro através da tecnologia blockchain</p>
-          <div className="flex justify-center gap-6 text-sm text-gray-400">
-            <span>Termos de Uso</span>
-            <span>Política de Privacidade</span>
-            <span>Contato</span>
-          </div>
+      <footer className="bg-gray-50 py-12 border-t">
+        <div className="max-w-6xl mx-auto px-4 text-center text-gray-500">
+          <p className="text-sm">
+            © {new Date().getFullYear()} AgroDeri Tecnologia LTDA. Todos os direitos reservados.
+          </p>
+          <p className="text-xs mt-2">
+            AgroDeri é uma plataforma de tecnologia que facilita o acesso a investimentos no agronegócio.
+          </p>
         </div>
       </footer>
     </div>
