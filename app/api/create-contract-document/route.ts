@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { userData, amount } = body
 
-    console.log("📄 Criando documento de contrato para:", userData.name)
+    console.log("📄 Criando contrato completo para:", userData.name)
 
     // Obter data atual para o contrato
     const now = new Date()
@@ -28,9 +28,8 @@ export async function POST(request: NextRequest) {
 
     console.log("📅 Data do contrato:", `${day} de ${month}`)
 
-    // URL da API externa
-    const externalApiUrl =
-      "https://api.agroderivative.tech/api/contracts/documents/d32a0375-2fce-4608-87c6-c521bd4ab591/create_document_from_template_on_clicksign/"
+    // URL da nova API
+    const externalApiUrl = "https://api.agroderivative.tech/api/contracts/documents/create_full_contract/"
 
     console.log("🔗 Fazendo requisição para:", externalApiUrl)
 
@@ -40,41 +39,37 @@ export async function POST(request: NextRequest) {
       "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
     }
 
-    // Preparar dados do template
-    const templateData = {
-      name: userData.name,
-      cpf: userData.cpf, // CPF com máscara
-      rg: userData.rg, // RG com máscara
-      valor: `R$ ${amount.toLocaleString("pt-BR")}`,
-      dia: day.toString(),
-      mes: month,
-    }
-
     // Gerar filename único
     const timestamp = Date.now()
-    const filename = `contrato_${userData.name.replace(/\s+/g, "_").toLowerCase()}_${timestamp}.docx`
+    const cleanName = userData.name.replace(/\s+/g, "_").toLowerCase()
+    const filename = `contrato_${cleanName}_${timestamp}.docx`
 
-    const data = {
-      document_title: `Contrato de Investimento - ${userData.name}`,
-      filename: filename,
-      template_id: "8be7a9a4-9461-41e4-884b-550021451867",
-      template_data: templateData,
-      metadata: {
-        investor_email: userData.email,
-        investment_amount: amount,
-        created_at: now.toISOString(),
-        cpf: userData.cpf,
-        phone: userData.phone,
+    // Preparar dados para a nova API
+    const contractData = {
+      template_data: {
+        name: userData.name,
+        cpf: userData.cpf, // CPF com máscara
+        rg: userData.rg, // RG com máscara
+        valor: `R$ ${amount.toLocaleString("pt-BR")}`,
+        dia: day.toString(),
+        mes: month,
       },
+      document_filename: filename,
+      signer_name: userData.name,
+      signer_email: userData.email,
+      signer_documentation: userData.cpf
+      envelope_name: `Contrato de Investimento AGD - ${userData.name}`,
+      notification_message:
+        "Seu contrato de investimento AGD está pronto para assinatura. Clique no link para assinar!",
     }
 
-    console.log("📋 Dados do contrato:", JSON.stringify(data, null, 2))
+    console.log("📋 Dados do contrato completo:", JSON.stringify(contractData, null, 2))
 
     // Fazer a requisição para o servidor externo
     const response = await fetch(externalApiUrl, {
       method: "POST",
       headers: headers,
-      body: JSON.stringify(data),
+      body: JSON.stringify(contractData),
     })
 
     console.log("📊 Status da resposta externa:", response.status)
@@ -83,36 +78,53 @@ export async function POST(request: NextRequest) {
     console.log("📦 Dados da resposta externa:", JSON.stringify(responseData, null, 2))
 
     if (response.ok) {
-      console.log("✅ Documento de contrato criado com sucesso!")
+      console.log("✅ Contrato completo criado com sucesso!")
+
+      // Extrair URL de download do arquivo original
+      let downloadUrl = null
+      if (
+        responseData.clicksign_full_response &&
+        responseData.clicksign_full_response.document &&
+        responseData.clicksign_full_response.document.data &&
+        responseData.clicksign_full_response.document.data.links &&
+        responseData.clicksign_full_response.document.data.links.files &&
+        responseData.clicksign_full_response.document.data.links.files.original
+      ) {
+        downloadUrl = responseData.clicksign_full_response.document.data.links.files.original
+        console.log("📥 URL de download extraída:", downloadUrl)
+      }
 
       return NextResponse.json(
         {
           success: true,
-          message: "Documento de contrato criado com sucesso",
-          document: responseData, // Incluir toda a resposta da API
-          contractData: {
+          message: "Contrato completo criado e enviado para assinatura com sucesso!",
+          contract: {
+            envelope_id: responseData.envelope_id,
+            document_id: responseData.document_id,
+            signer_id: responseData.signer_id,
+            requirement_id: responseData.requirement_id,
+            local_document_id: responseData.local_document_id,
             filename: filename,
-            templateData: templateData,
+            downloadUrl: downloadUrl,
             createdAt: now.toISOString(),
-            documentIdClicksign: responseData.document_id_clicksign,
-            downloadUrl: responseData.clicksign_response?.data?.links?.files?.original,
           },
+          fullResponse: responseData, // Incluir resposta completa para debug
         },
         { status: 200 },
       )
     } else {
-      console.error("❌ Erro ao criar documento:", responseData)
+      console.error("❌ Erro ao criar contrato completo:", responseData)
       return NextResponse.json(
         {
           success: false,
-          error: "Erro ao criar documento de contrato",
+          error: "Erro ao criar contrato completo",
           details: responseData,
         },
         { status: response.status },
       )
     }
   } catch (error) {
-    console.error("❌ Erro no proxy de criação de contrato:", error)
+    console.error("❌ Erro no proxy de criação de contrato completo:", error)
 
     return NextResponse.json(
       {

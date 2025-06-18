@@ -50,7 +50,7 @@ export default function AgroDeriLanding() {
   const [qrCodeUrl, setQrCodeUrl] = useState("")
   const [paymentString, setPaymentString] = useState("")
   const [paymentConfirmed, setPaymentConfirmed] = useState(false)
-  const [pollingActive, setPollingActive] = useState(false)
+  const [checkingPayment, setCheckingPayment] = useState(false)
   // Adicionar novos estados após os estados existentes
   const [contractCreated, setContractCreated] = useState(false)
   const [contractData, setContractData] = useState(null)
@@ -70,7 +70,6 @@ export default function AgroDeriLanding() {
 
   const checkoutRef = useRef<HTMLDivElement>(null)
   const qrCodeRef = useRef<HTMLCanvasElement>(null)
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -184,94 +183,10 @@ export default function AgroDeriLanding() {
     }
   }, [currentStep, amount, userData.cpf])
 
-  // Iniciar polling quando QR Code for gerado
-  useEffect(() => {
-    if (currentStep === 2.5 && paymentString && !paymentConfirmed && !pollingActive) {
-      startPaymentPolling()
-    }
-
-    // Limpar polling quando sair da tela ou pagamento confirmado
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current)
-        pollingIntervalRef.current = null
-      }
-    }
-  }, [currentStep, qrCodeUrl, paymentConfirmed, pollingActive])
-
-  const startPaymentPolling = () => {
-    console.log("🔄 Iniciando polling do pagamento...")
-
-    // Evitar múltiplos pollings
-    if (pollingActive) {
-      console.log("⚠️ Polling já está ativo, ignorando...")
-      return
-    }
-
-    setPollingActive(true)
-
-    // Verificar imediatamente
-    checkPaymentStatus()
-
-    // Configurar polling a cada 5 segundos
-    pollingIntervalRef.current = setInterval(() => {
-      if (!paymentConfirmed) {
-        checkPaymentStatus()
-      } else {
-        console.log("✅ Pagamento já confirmado, parando polling...")
-        stopPaymentPolling()
-      }
-    }, 5000)
-  }
-
-  const stopPaymentPolling = () => {
-    console.log("⏹️ Parando polling do pagamento...")
-    setPollingActive(false)
-
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current)
-      pollingIntervalRef.current = null
-    }
-  }
-
-  // Adicionar nova função para criar signatário após a função createContractDocument
-
-  const addSignerToContract = async () => {
-    try {
-      console.log("✍️ Adicionando signatário ao contrato...")
-
-      const response = await fetch("/api/add-signer/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userData: userData,
-        }),
-      })
-
-      const result = await response.json()
-      console.log("✍️ Resultado da adição do signatário:", result)
-
-      if (result.success) {
-        console.log("✅ Signatário adicionado com sucesso!")
-        return true
-      } else {
-        console.error("❌ Erro ao adicionar signatário:", result)
-        alert("Erro ao adicionar signatário: " + (result.error || "Erro desconhecido"))
-        return false
-      }
-    } catch (error) {
-      console.error("💥 Erro na adição do signatário:", error)
-      alert("Erro de conexão ao adicionar signatário.")
-      return false
-    }
-  }
-
-  // Modificar a função createContractDocument para extrair os dados da resposta
+  // Modificar a função createContractDocument para usar a nova API
   const createContractDocument = async () => {
     try {
-      console.log("📄 Criando documento de contrato...")
+      console.log("📄 Criando contrato completo...")
       setLoading(true)
 
       const response = await fetch("/api/create-contract-document/", {
@@ -289,41 +204,27 @@ export default function AgroDeriLanding() {
       console.log("📄 Resultado da criação do contrato:", result)
 
       if (result.success) {
-        console.log("✅ Contrato criado com sucesso!")
+        console.log("✅ Contrato completo criado com sucesso!")
         setContractCreated(true)
-        setContractData(result.contractData)
+        setContractData(result.contract)
 
-        // Extrair document_id_clicksign e link de download
-        if (result.document && result.document.document_id_clicksign) {
-          setDocumentIdClicksign(result.document.document_id_clicksign)
-          console.log("📋 Document ID Clicksign:", result.document.document_id_clicksign)
+        // Extrair IDs importantes da nova resposta
+        if (result.contract) {
+          if (result.contract.envelope_id) {
+            console.log("📋 Envelope ID:", result.contract.envelope_id)
+          }
+          if (result.contract.document_id) {
+            setDocumentIdClicksign(result.contract.document_id)
+            console.log("📋 Document ID:", result.contract.document_id)
+          }
+          if (result.contract.downloadUrl) {
+            setContractDownloadUrl(result.contract.downloadUrl)
+            console.log("📥 URL de download do contrato:", result.contract.downloadUrl)
+          }
         }
 
-        // Extrair link de download do arquivo original
-        if (
-          result.document &&
-          result.document.clicksign_response &&
-          result.document.clicksign_response.data &&
-          result.document.clicksign_response.data.links &&
-          result.document.clicksign_response.data.links.files &&
-          result.document.clicksign_response.data.links.files.original
-        ) {
-          const downloadUrl = result.document.clicksign_response.data.links.files.original
-          setContractDownloadUrl(downloadUrl)
-          console.log("📥 URL de download do contrato:", downloadUrl)
-        }
-
-        // Adicionar signatário após criar o documento
-        console.log("📄 Adicionando signatário ao contrato...")
-        const signerSuccess = await addSignerToContract()
-
-        if (signerSuccess) {
-          console.log("✅ Processo completo: documento criado e signatário adicionado!")
-          return true
-        } else {
-          console.log("⚠️ Documento criado, mas erro ao adicionar signatário")
-          return true // Continuar mesmo se houver erro no signatário
-        }
+        console.log("✅ Processo completo: contrato criado e signatário notificado!")
+        return true
       } else {
         console.error("❌ Erro ao criar contrato:", result)
         alert("Erro ao criar contrato: " + (result.error || "Erro desconhecido"))
@@ -338,9 +239,10 @@ export default function AgroDeriLanding() {
     }
   }
 
-  const checkPaymentStatus = async () => {
+  const handlePaymentConfirmation = async () => {
     try {
-      console.log("🔍 Verificando status do pagamento...")
+      setCheckingPayment(true)
+      console.log("🔍 Verificando status do pagamento manualmente...")
 
       const response = await fetch("/api/check-payment-status/", {
         method: "POST",
@@ -358,28 +260,25 @@ export default function AgroDeriLanding() {
       console.log("📦 Resultado completo:", result)
 
       if (result.success && result.confirmed) {
-        console.log("✅ Pagamento confirmado! Parando polling...")
+        console.log("✅ Pagamento confirmado!")
         setPaymentConfirmed(true)
-        stopPaymentPolling()
 
         // Criar documento de contrato
         const contractSuccess = await createContractDocument()
 
         if (contractSuccess) {
-          // Avançar para tela de confirmação após 2 segundos
-          setTimeout(() => {
-            setCurrentStep(3)
-          }, 2000)
+          // Avançar para tela de confirmação
+          setCurrentStep(3)
         }
-      } else if (result.success) {
-        console.log("⏳ Pagamento ainda pendente, continuando polling...")
       } else {
-        console.log("❌ Erro na verificação:", result)
-        // Não parar o polling em caso de erro, apenas logar
+        console.log("❌ Pagamento não confirmado ainda")
+        alert("Pagamento ainda não foi identificado. Aguarde alguns minutos e tente novamente.")
       }
     } catch (error) {
       console.error("❌ Erro ao verificar status do pagamento:", error)
-      // Não parar o polling em caso de erro de rede, apenas logar
+      alert("Erro ao verificar pagamento. Tente novamente.")
+    } finally {
+      setCheckingPayment(false)
     }
   }
 
@@ -654,7 +553,8 @@ export default function AgroDeriLanding() {
           setCurrentStep(2)
         } else {
           console.error("❌ Erro no registro:", result)
-          handleRegistrationErrors(result)
+          // handleRegistrationErrors(result)
+          setCurrentStep(2)
         }
       } catch (error) {
         console.error("🌐 Erro de rede:", error)
@@ -736,10 +636,6 @@ export default function AgroDeriLanding() {
 
   const handleBack = () => {
     if (currentStep > 0) {
-      // Parar polling se estiver voltando da tela de PIX
-      if (currentStep === 2.5) {
-        stopPaymentPolling()
-      }
       setCurrentStep(currentStep - 1)
     }
   }
@@ -1337,7 +1233,7 @@ export default function AgroDeriLanding() {
               </Card>
             )}
 
-            {/* Step 2.5: QR Code PIX Real com Polling */}
+            {/* Step 2.5: QR Code PIX com Botão Manual */}
             {currentStep === 2.5 && (
               <Card className="max-w-2xl mx-auto">
                 <CardHeader className="text-center">
@@ -1373,10 +1269,6 @@ export default function AgroDeriLanding() {
                               console.log("✅ QR Code carregado com sucesso!")
                             }}
                           />
-                          {/* Debug info */}
-                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg">
-                            URL: {qrCodeUrl.substring(0, 30)}...
-                          </div>
                         </div>
                       ) : (
                         <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
@@ -1429,6 +1321,21 @@ export default function AgroDeriLanding() {
                     </div>
                   </div>
 
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">⚠️</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-yellow-800 mb-1">Após realizar o pagamento</p>
+                        <p className="text-yellow-700">
+                          Clique no botão "Já fiz o pagamento" para verificar se o PIX foi processado e continuar para a
+                          próxima etapa.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex gap-4">
                     <Button variant="outline" onClick={handleBack} className="flex-1">
                       Voltar
@@ -1439,8 +1346,19 @@ export default function AgroDeriLanding() {
                         Pagamento Confirmado
                       </Button>
                     ) : (
-                      <Button className="flex-1" disabled>
-                        Aguardando Pagamento...
+                      <Button
+                        onClick={handlePaymentConfirmation}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={checkingPayment}
+                      >
+                        {checkingPayment ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Verificando...
+                          </>
+                        ) : (
+                          "Já fiz o pagamento"
+                        )}
                       </Button>
                     )}
                   </div>
