@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       document_filename: filename,
       signer_name: userData.name,
       signer_email: userData.email,
-      signer_documentation: userData.cpf
+      signer_documentation: userData.cpf,
       envelope_name: `Contrato de Investimento AGD - ${userData.name}`,
       notification_message:
         "Seu contrato de investimento AGD está pronto para assinatura. Clique no link para assinar!",
