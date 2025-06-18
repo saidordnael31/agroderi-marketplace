@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
           success: false,
           confirmed: false,
           error: "Erro ao processar resposta da API",
-          details: textResponse,
+          details:"ssss" +textResponse,
         },
-        { status: 500 },
+        { status: 200 },
       )
     }
 

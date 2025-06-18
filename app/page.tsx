@@ -371,7 +371,7 @@ export default function AgroDeriLanding() {
             setCurrentStep(3)
           }, 2000)
         }
-      } else if (result.success && !result.confirmed) {
+      } else if (result.success) {
         console.log("⏳ Pagamento ainda pendente, continuando polling...")
       } else {
         console.log("❌ Erro na verificação:", result)
