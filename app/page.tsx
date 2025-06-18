@@ -330,7 +330,7 @@ export default function AgroDeriLanding() {
     try {
       console.log("🔍 Verificando status do pagamento...")
 
-      const response = await fetch(`https://api.agroderivative.tech/api/get-deposit-status/?cpf=${cpf}`, {
+      const response = await fetch(`https://api.agroderivative.tech/api/get-deposit-status/?cpf=${unmaskValue(userData.cpf)}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
