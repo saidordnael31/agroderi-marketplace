@@ -3,25 +3,23 @@ import { type NextRequest, NextResponse } from "next/server"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { cpf, value } = body
+    const { cpf } = body
 
-    console.log("🔍 Verificando status do pagamento:", { cpf, value })
+    console.log("🔍 Verificando status do pagamento:", { cpf })
 
-    // URL da API externa
-    const externalApiUrl =`https://api.agroderivative.tech/api/get-deposit-status/?cpf=${cpf}`;
+    // URL da API externa - GET endpoint
+    const externalApiUrl = `https://api.agroderivative.tech/api/get-deposit-status/?cpf=${cpf}`
 
-    console.log("🔗 Fazendo requisição para:", externalApiUrl)
+    console.log("🔗 Fazendo requisição GET para:", externalApiUrl)
 
     const headers = {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
+      Accept: "application/json",
       "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
     }
 
+    console.log("📋 Headers:", headers)
 
-    console.log("📋 Dados enviados:", data)
-
-    // Fazer a requisição para o servidor externo
+    // Fazer a requisição GET para o servidor externo
     const response = await fetch(externalApiUrl, {
       method: "GET",
       headers: headers,
@@ -51,7 +49,6 @@ export async function POST(request: NextRequest) {
           success: true,
           confirmed: false,
           message: "Pagamento pendente",
-          data: responseData,
         },
         { status: 200 },
       )
