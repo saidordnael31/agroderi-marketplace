@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { cpf } = body
 
-    console.log("🔍 Verificando status do pagamento:", { cpf })
+    console.log("🔍 Verificando status do pagamento para CPF:", cpf)
 
     // URL da API externa - GET endpoint
     const externalApiUrl = `https://api.agroderivative.tech/api/get-deposit-status/?cpf=${cpf}`
@@ -13,11 +13,11 @@ export async function POST(request: NextRequest) {
     console.log("🔗 Fazendo requisição GET para:", externalApiUrl)
 
     const headers = {
-      "Accept": "application/json",
+      Accept: "application/json",
       "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
     }
 
-    console.log("📋 Headers:", headers)
+    console.log("📋 Headers enviados:", headers)
 
     // Fazer a requisição GET para o servidor externo
     const response = await fetch(externalApiUrl, {
@@ -26,37 +26,69 @@ export async function POST(request: NextRequest) {
     })
 
     console.log("📊 Status da resposta externa:", response.status)
+    console.log("📊 Headers da resposta:", Object.fromEntries(response.headers.entries()))
 
-    const responseData = await response.json()
-    console.log("📦 Dados da resposta externa:", responseData)
+    let responseData
+    try {
+      responseData = await response.json()
+      console.log("📦 Dados da resposta externa:", JSON.stringify(responseData, null, 2))
+    } catch (parseError) {
+      console.error("❌ Erro ao fazer parse da resposta:", parseError)
+      const textResponse = await response.text()
+      console.log("📄 Resposta como texto:", textResponse)
 
-    // Se status 200, pagamento confirmado
+      return NextResponse.json(
+        {
+          success: false,
+          confirmed: false,
+          error: "Erro ao processar resposta da API",
+          details: textResponse,
+        },
+        { status: 500 },
+      )
+    }
+
+    // Verificar diferentes cenários de resposta
     if (response.status === 200) {
-      console.log("✅ Pagamento confirmado!")
+    
+        console.log("✅ Pagamento confirmado!")
+        return NextResponse.json(
+          {
+            success: true,
+            confirmed: true,
+            message: "Pagamento confirmado",
+            data: responseData,
+          },
+          { status: 200 },
+        )
+      
+    } else if (response.status === 404) {
+      console.log("🔍 Depósito não encontrado (ainda não foi feito)")
       return NextResponse.json(
         {
           success: true,
-          confirmed: true,
-          message: "Pagamento confirmado",
+          confirmed: false,
+          message: "Depósito não encontrado",
           data: responseData,
         },
         { status: 200 },
       )
     } else {
-      console.log("⏳ Pagamento ainda pendente...")
+      console.log("❌ Erro na API externa:", response.status, responseData)
       return NextResponse.json(
         {
-          success: true,
+          success: false,
           confirmed: false,
-          message: "Pagamento pendente",
+          error: `Erro na API externa: ${response.status}`,
+          data: responseData,
         },
-        { status: 200 },
+        { status: 200 }, // Retornar 200 para não quebrar o polling
       )
     }
   } catch (error) {
     console.error("❌ Erro ao verificar status do pagamento:", error)
 
-    // Retornar erro detalhado
+    // Retornar erro mas com status 200 para não quebrar o polling
     return NextResponse.json(
       {
         success: false,
@@ -65,7 +97,7 @@ export async function POST(request: NextRequest) {
         details: error.message,
         type: "payment_status_error",
       },
-      { status: 500 },
+      { status: 200 },
     )
   }
 }

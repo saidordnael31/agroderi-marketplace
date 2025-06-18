@@ -201,6 +201,13 @@ export default function AgroDeriLanding() {
 
   const startPaymentPolling = () => {
     console.log("🔄 Iniciando polling do pagamento...")
+
+    // Evitar múltiplos pollings
+    if (pollingActive) {
+      console.log("⚠️ Polling já está ativo, ignorando...")
+      return
+    }
+
     setPollingActive(true)
 
     // Verificar imediatamente
@@ -208,7 +215,12 @@ export default function AgroDeriLanding() {
 
     // Configurar polling a cada 5 segundos
     pollingIntervalRef.current = setInterval(() => {
-      checkPaymentStatus()
+      if (!paymentConfirmed) {
+        checkPaymentStatus()
+      } else {
+        console.log("✅ Pagamento já confirmado, parando polling...")
+        stopPaymentPolling()
+      }
     }, 5000)
   }
 
@@ -330,21 +342,23 @@ export default function AgroDeriLanding() {
     try {
       console.log("🔍 Verificando status do pagamento...")
 
-      const response = await fetch(`https://api.agroderivative.tech/api/get-deposit-status/?cpf=${unmaskValue(userData.cpf)}`, {
-        method: "GET",
+      const response = await fetch("/api/check-payment-status/", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
-           "Accept": "application/json",
-           "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
         },
-      
+        body: JSON.stringify({
+          cpf: unmaskValue(userData.cpf),
+        }),
       })
 
-      const result = await response.json()
-      console.log("📊 Status do pagamento:", result)
+      console.log("📊 Status da resposta:", response.status)
 
-      if (result.ok) {
-        console.log("✅ Pagamento confirmado! Criando contrato...")
+      const result = await response.json()
+      console.log("📦 Resultado completo:", result)
+
+      if (result.success && result.confirmed) {
+        console.log("✅ Pagamento confirmado! Parando polling...")
         setPaymentConfirmed(true)
         stopPaymentPolling()
 
@@ -357,12 +371,15 @@ export default function AgroDeriLanding() {
             setCurrentStep(3)
           }, 2000)
         }
+      } else if (result.success && !result.confirmed) {
+        console.log("⏳ Pagamento ainda pendente, continuando polling...")
       } else {
-        console.log("⏳ Pagamento ainda pendente...")
+        console.log("❌ Erro na verificação:", result)
+        // Não parar o polling em caso de erro, apenas logar
       }
     } catch (error) {
       console.error("❌ Erro ao verificar status do pagamento:", error)
-      // Não parar o polling em caso de erro de rede
+      // Não parar o polling em caso de erro de rede, apenas logar
     }
   }
 
