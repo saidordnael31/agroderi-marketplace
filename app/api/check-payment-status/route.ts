@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     console.log("🔗 Fazendo requisição GET para:", externalApiUrl)
 
     const headers = {
-      Accept: "application/json",
+      "Accept": "application/json",
       "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
     }
 

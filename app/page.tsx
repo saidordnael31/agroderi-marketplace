@@ -330,20 +330,20 @@ export default function AgroDeriLanding() {
     try {
       console.log("🔍 Verificando status do pagamento...")
 
-      const response = await fetch("/api/check-payment-status/", {
-        method: "POST",
+      const response = await fetch(`https://api.agroderivative.tech/api/get-deposit-status/?cpf=${cpf}`, {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
+           "Accept": "application/json",
+           "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
         },
-        body: JSON.stringify({
-          cpf: unmaskValue(userData.cpf),
-        }),
+      
       })
 
       const result = await response.json()
       console.log("📊 Status do pagamento:", result)
 
-      if (result.success && result.confirmed) {
+      if (result.ok) {
         console.log("✅ Pagamento confirmado! Criando contrato...")
         setPaymentConfirmed(true)
         stopPaymentPolling()
