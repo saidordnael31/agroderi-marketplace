@@ -28,6 +28,7 @@ import {
   EyeOff,
 } from "lucide-react"
 import { maskCPF, maskRG, maskPhone, maskDate, validateDate, unmaskValue } from "@/utils/input-masks"
+import { AVAILABLE_CRYPTOS, getPopularCryptos } from "@/utils/crypto-list"
 
 export default function AgroDeriLanding() {
   const [showCheckout, setShowCheckout] = useState(false)
@@ -67,6 +68,8 @@ export default function AgroDeriLanding() {
     password: "",
     confirmPassword: "",
   })
+  const [selectedCrypto, setSelectedCrypto] = useState("")
+  const [showAllCryptos, setShowAllCryptos] = useState(false)
 
   const checkoutRef = useRef<HTMLDivElement>(null)
   const qrCodeRef = useRef<HTMLCanvasElement>(null)
@@ -644,7 +647,11 @@ export default function AgroDeriLanding() {
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
-      setCurrentStep(2.5)
+      if (paymentMethod === "pix") {
+        setCurrentStep(2.5) // PIX QR Code
+      } else if (paymentMethod === "crypto") {
+        setCurrentStep(2.7) // Crypto Address (novo step)
+      }
     }, 2000)
   }
 
@@ -848,7 +855,7 @@ export default function AgroDeriLanding() {
       </section>
 
       {/* Como Funciona */}
-      <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-100">
+      <section className="py-20 bg-gradient-to-br from-green-50 to emerald-100">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center space-y-6 mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-gray-900">Tá, mas como eu ganho com isso?</h2>
@@ -1180,7 +1187,7 @@ export default function AgroDeriLanding() {
               </Card>
             )}
 
-            {/* Step 2: Pagamento PIX */}
+            {/* Step 2: Método de Pagamento */}
             {currentStep === 2 && (
               <Card className="max-w-2xl mx-auto">
                 <CardHeader>
@@ -1188,18 +1195,145 @@ export default function AgroDeriLanding() {
                   <CardDescription>Total: R$ {amount.toLocaleString()}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="p-4 border-2 border-green-500 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-                        <span className="text-green-600 font-bold text-xs">PIX</span>
+                  {/* Seleção do método de pagamento */}
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium">Escolha como pagar:</Label>
+
+                    {/* PIX Option */}
+                    <div
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        paymentMethod === "pix"
+                          ? "border-green-500 bg-green-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                      onClick={() => setPaymentMethod("pix")}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
+                          <span className="text-green-600 font-bold text-xs">PIX</span>
+                        </div>
+                        <div>
+                          <div className="font-medium">PIX</div>
+                          <div className="text-sm text-gray-500">Aprovação instantânea</div>
+                        </div>
+                        {paymentMethod === "pix" && <CheckCircle className="h-5 w-5 text-green-600 ml-auto" />}
                       </div>
-                      <div>
-                        <div className="font-medium">PIX</div>
-                        <div className="text-sm text-gray-500">Aprovação instantânea</div>
+                    </div>
+
+                    {/* Crypto Option */}
+                    <div
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        paymentMethod === "crypto"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                      onClick={() => setPaymentMethod("crypto")}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                          <Coins className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium">Criptomoedas</div>
+                          <div className="text-sm text-gray-500">Bitcoin, Ethereum, USDT e mais</div>
+                        </div>
+                        {paymentMethod === "crypto" && <CheckCircle className="h-5 w-5 text-blue-600 ml-auto" />}
                       </div>
                     </div>
                   </div>
 
+                  {/* Seleção de Criptomoeda */}
+                  {paymentMethod === "crypto" && (
+                    <div className="space-y-4">
+                      <Label className="text-base font-medium">Escolha a criptomoeda:</Label>
+
+                      {/* Criptos Populares */}
+                      <div>
+                        <p className="text-sm text-gray-600 mb-3">Mais populares:</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {getPopularCryptos().map((crypto) => (
+                            <div
+                              key={crypto.coin}
+                              className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                selectedCrypto === crypto.coin
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
+                              onClick={() => setSelectedCrypto(crypto.coin)}
+                            >
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={crypto.icon || "/placeholder.svg"}
+                                  alt={crypto.name}
+                                  className="w-6 h-6"
+                                  onError={(e) => {
+                                    e.target.src = "/placeholder.svg?height=24&width=24"
+                                  }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm">{crypto.coin}</div>
+                                  <div className="text-xs text-gray-500 truncate">{crypto.name}</div>
+                                </div>
+                                {selectedCrypto === crypto.coin && (
+                                  <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Botão para mostrar todas as criptos */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAllCryptos(!showAllCryptos)}
+                        className="w-full"
+                      >
+                        {showAllCryptos ? "Mostrar menos" : `Ver todas as ${AVAILABLE_CRYPTOS.length} criptomoedas`}
+                      </Button>
+
+                      {/* Todas as Criptomoedas */}
+                      {showAllCryptos && (
+                        <div className="max-h-60 overflow-y-auto border rounded-lg p-3">
+                          <div className="grid gap-2">
+                            {AVAILABLE_CRYPTOS.map((crypto) => (
+                              <div
+                                key={crypto.coin}
+                                className={`p-2 rounded cursor-pointer transition-all ${
+                                  selectedCrypto === crypto.coin
+                                    ? "bg-blue-100 border border-blue-300"
+                                    : "hover:bg-gray-50"
+                                }`}
+                                onClick={() => {
+                                  setSelectedCrypto(crypto.coin)
+                                  setShowAllCryptos(false)
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={crypto.icon || "/placeholder.svg"}
+                                    alt={crypto.name}
+                                    className="w-5 h-5"
+                                    onError={(e) => {
+                                      e.target.src = "/placeholder.svg?height=20&width=20"
+                                    }}
+                                  />
+                                  <div className="flex-1">
+                                    <span className="font-medium text-sm">{crypto.coin}</span>
+                                    <span className="text-gray-500 text-sm ml-2">{crypto.name}</span>
+                                  </div>
+                                  {selectedCrypto === crypto.coin && <CheckCircle className="h-4 w-4 text-blue-600" />}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Resumo do Investimento */}
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-blue-900 mb-2">Resumo do Investimento</h3>
                     <div className="space-y-1 text-sm">
@@ -1209,8 +1343,20 @@ export default function AgroDeriLanding() {
                       </div>
                       <div className="flex justify-between">
                         <span>Método:</span>
-                        <span>PIX</span>
+                        <span className="capitalize">
+                          {paymentMethod === "pix"
+                            ? "PIX"
+                            : paymentMethod === "crypto" && selectedCrypto
+                              ? `${selectedCrypto}`
+                              : "Selecione um método"}
+                        </span>
                       </div>
+                      {paymentMethod === "crypto" && selectedCrypto && (
+                        <div className="flex justify-between">
+                          <span>Criptomoeda:</span>
+                          <span>{AVAILABLE_CRYPTOS.find((c) => c.coin === selectedCrypto)?.name}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1218,14 +1364,20 @@ export default function AgroDeriLanding() {
                     <Button variant="outline" onClick={handleBack} className="flex-1">
                       Voltar
                     </Button>
-                    <Button onClick={handlePayment} className="flex-1" disabled={loading}>
+                    <Button
+                      onClick={handlePayment}
+                      className="flex-1"
+                      disabled={loading || (paymentMethod === "crypto" && !selectedCrypto)}
+                    >
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Gerando PIX...
+                          {paymentMethod === "pix" ? "Gerando PIX..." : "Gerando endereço..."}
                         </>
-                      ) : (
+                      ) : paymentMethod === "pix" ? (
                         "Gerar PIX"
+                      ) : (
+                        "Gerar endereço crypto"
                       )}
                     </Button>
                   </div>
@@ -1331,6 +1483,118 @@ export default function AgroDeriLanding() {
                         <p className="text-yellow-700">
                           Clique no botão "Já fiz o pagamento" para verificar se o PIX foi processado e continuar para a
                           próxima etapa.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <Button variant="outline" onClick={handleBack} className="flex-1">
+                      Voltar
+                    </Button>
+                    {paymentConfirmed ? (
+                      <Button className="flex-1 bg-green-600 text-white" disabled>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Pagamento Confirmado
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handlePaymentConfirmation}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={checkingPayment}
+                      >
+                        {checkingPayment ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Verificando...
+                          </>
+                        ) : (
+                          "Já fiz o pagamento"
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 2.7: Endereço Crypto */}
+            {currentStep === 2.7 && (
+              <Card className="max-w-2xl mx-auto">
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">Pague com {selectedCrypto}</CardTitle>
+                  <CardDescription>
+                    Envie {selectedCrypto} para o endereço abaixo para finalizar seu investimento
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="bg-white border-2 border-gray-200 rounded-lg p-6 text-center">
+                    {/* Crypto Info */}
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <img
+                        src={AVAILABLE_CRYPTOS.find((c) => c.coin === selectedCrypto)?.icon || "/placeholder.svg"}
+                        alt={selectedCrypto}
+                        className="w-8 h-8"
+                        onError={(e) => {
+                          e.target.src = "/placeholder.svg?height=32&width=32"
+                        }}
+                      />
+                      <div>
+                        <div className="font-bold text-lg">{selectedCrypto}</div>
+                        <div className="text-sm text-gray-500">
+                          {AVAILABLE_CRYPTOS.find((c) => c.coin === selectedCrypto)?.name}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* QR Code Placeholder */}
+                    <div className="w-64 h-64 mx-auto mb-4 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                      <div className="text-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">Gerando endereço...</p>
+                      </div>
+                    </div>
+
+                    {/* Crypto Address */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-2">Endereço da carteira:</p>
+                      <div className="bg-white border rounded p-3 text-xs font-mono break-all">
+                        1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => {
+                          navigator.clipboard.writeText("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa")
+                          alert("Endereço copiado!")
+                        }}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copiar Endereço
+                      </Button>
+                    </div>
+
+                    <div className="text-center space-y-2 mt-4">
+                      <p className="text-sm text-gray-600">
+                        <strong>Valor:</strong> R$ {amount.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <strong>Rede:</strong> {selectedCrypto === "USDT" ? "TRC20 (Tron)" : "Mainnet"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">⚠️</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-yellow-800 mb-1">Após enviar a criptomoeda</p>
+                        <p className="text-yellow-700">
+                          Clique no botão "Já fiz o pagamento" para verificar se a transação foi processada e continuar
+                          para a próxima etapa.
                         </p>
                       </div>
                     </div>
