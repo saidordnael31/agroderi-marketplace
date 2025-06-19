@@ -502,12 +502,13 @@ export default function AgroDeriLanding() {
 
       if (response.ok) {
         console.log("✅ Login realizado com sucesso!")
+        console.log("📊 Dados do login:", result)
 
         // Fechar modal
         setShowLoginModal(false)
 
-        // Abrir nova aba com área do investidor
-        const investorUrl = `/investor-dashboard?token=${result.access || result.token || "logged"}&user=${encodeURIComponent(loginData.username)}`
+        // Abrir nova aba com área do investidor passando o CPF
+        const investorUrl = `/investor-dashboard?token=${result.token}&user=${encodeURIComponent(loginData.username)}&cpf=${result.cpf}&user_id=${result.user_id}`
         window.open(investorUrl, "_blank")
 
         // Limpar dados do formulário
@@ -876,6 +877,11 @@ export default function AgroDeriLanding() {
 
       {/* Validação e Autoridade */}
       <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-4"></div>
+      </section>
+
+      {/* Validação e Autoridade */}
+      <section className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center space-y-6 mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-gray-900">
@@ -897,6 +903,7 @@ export default function AgroDeriLanding() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-start">
+            {/* Coluna 1 */}
             <div className="space-y-6">
               <h3 className="text-2xl font-bold text-gray-900 mb-6">Validação Completa</h3>
               <div className="space-y-4">
@@ -906,8 +913,8 @@ export default function AgroDeriLanding() {
                   "Tokens com rastreabilidade completa",
                   "Equipe com histórico de bilhões em operações agroindustriais",
                   "Conformidade com CVM e Banco Central",
-                ].map((item, index) => (
-                  <div key={index} className="flex items-start gap-3">
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-3">
                     <Shield className="h-5 w-5 text-green-600 mt-0.5" />
                     <span className="text-gray-700">{item}</span>
                   </div>
@@ -915,6 +922,7 @@ export default function AgroDeriLanding() {
               </div>
             </div>
 
+            {/* Coluna 2 */}
             <div className="bg-gray-50 rounded-2xl p-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-6">Comparativo</h3>
               <div className="space-y-4">
@@ -927,9 +935,9 @@ export default function AgroDeriLanding() {
                   ["Intermediários caros", "Liquidez direta"],
                   ["Sem rastreabilidade", "100% auditável na blockchain"],
                   ["Dependente de bancos", "Wallet própria, USDT e BTC"],
-                ].map(([traditional, agroderi], index) => (
+                ].map(([traditional, agroderi]) => (
                   <div
-                    key={index}
+                    key={traditional}
                     className="grid grid-cols-2 gap-4 text-sm py-2 border-b border-gray-200 last:border-0"
                   >
                     <span className="text-red-600">❌ {traditional}</span>
@@ -952,8 +960,6 @@ export default function AgroDeriLanding() {
           </div>
         </div>
       </section>
-
-      {/* Como Funciona */}
       <section className="py-20 bg-gradient-to-br from-green-50 to emerald-100">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center space-y-6 mb-16">
@@ -1020,8 +1026,6 @@ export default function AgroDeriLanding() {
           </div>
         </div>
       </section>
-
-      {/* Checkout Section */}
       {showCheckout && (
         <section ref={checkoutRef} className="py-20 bg-white">
           <div className="max-w-4xl mx-auto px-4">
@@ -1677,8 +1681,6 @@ export default function AgroDeriLanding() {
           </div>
         </section>
       )}
-
-      {/* Modal de Login */}
       {showLoginModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md">
@@ -1750,8 +1752,6 @@ export default function AgroDeriLanding() {
           </Card>
         </div>
       )}
-
-      {/* Footer */}
       <footer className="bg-gray-50 py-12 border-t">
         <div className="max-w-6xl mx-auto px-4 text-center text-gray-500">
           <p className="text-sm">
