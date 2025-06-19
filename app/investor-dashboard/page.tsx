@@ -44,11 +44,11 @@ export default function InvestorDashboard() {
       setError("")
       console.log("📊 Buscando perfil do usuário com CPF:", cpf)
 
-      const response = await fetch(`https://api.agroderivative.tech/api/users/profile-by-cpf/?cpf=${cpf}`, {
+      // Usar nossa API route ao invés da requisição direta
+      const response = await fetch(`/api/get-user-profile?cpf=${cpf}`, {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
         },
       })
 
@@ -74,7 +74,7 @@ export default function InvestorDashboard() {
       } else {
         const errorData = await response.json()
         console.error("❌ Erro na API:", errorData)
-        setError("Não foi possível carregar os dados do investimento")
+        setError(errorData.error || "Não foi possível carregar os dados do investimento")
       }
     } catch (error) {
       console.error("❌ Erro ao buscar perfil:", error)
