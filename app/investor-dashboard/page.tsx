@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react"
+import { maskCPF, maskPhone, maskRG } from "@/utils/input-masks"
 
 export default function InvestorDashboard() {
   const searchParams = useSearchParams()
@@ -224,16 +225,7 @@ export default function InvestorDashboard() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Tokens AGD</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{userProfile.tokens_amount}</div>
-                  <p className="text-xs text-muted-foreground">+{userProfile.bonus_percentage}% bônus incluído</p>
-                </CardContent>
-              </Card>
+            
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -260,7 +252,7 @@ export default function InvestorDashboard() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {userProfile.contract_generated_successfully ? "Contrato gerado" : "Aguardando contrato"}
+                    {userProfile.contract_generated_successfully ? "Contrato gerado e enviado por e-mail" : "Aguardando contrato"}
                   </p>
                 </CardContent>
               </Card>
@@ -286,7 +278,7 @@ export default function InvestorDashboard() {
                     </div>
                     <div>
                       <span className="text-gray-500">CPF:</span>
-                      <p className="font-medium">{userProfile.cpf}</p>
+                      <p className="font-medium">{maskCPF(userProfile.cpf || "")}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Email:</span>
@@ -294,11 +286,11 @@ export default function InvestorDashboard() {
                     </div>
                     <div>
                       <span className="text-gray-500">WhatsApp:</span>
-                      <p className="font-medium">{userProfile.whatsapp}</p>
+                      <p className="font-medium">{maskPhone(userProfile.whatsapp || "")}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">RG:</span>
-                      <p className="font-medium">{userProfile.rg}</p>
+                      <p className="font-medium">{maskRG(userProfile.rg || "")}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">ID do Usuário:</span>
@@ -358,21 +350,13 @@ export default function InvestorDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button className="w-full" variant="outline" disabled={!userProfile.contract_generated_successfully}>
-                    <Download className="mr-2 h-4 w-4" />
-                    {userProfile.contract_generated_successfully ? "Baixar Contrato" : "Contrato não disponível"}
+                 
+
+                  <Button className="w-full" variant="outline"> 
+                    Pedir resgate e cancelar investimento
                   </Button>
 
-                  <Button className="w-full" variant="outline">
-                    <TrendingUp className="mr-2 h-4 w-4" />
-                    Acessar Staking
-                  </Button>
-
-                  <Button className="w-full" variant="outline" onClick={handleRefresh}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Atualizar Dados
-                  </Button>
-
+                
                   <div className="pt-4 border-t">
                     <h4 className="font-medium mb-2">Próximos Passos:</h4>
                     <ul className="text-sm text-gray-600 space-y-1">
