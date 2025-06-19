@@ -7,8 +7,8 @@ export async function POST(request: NextRequest) {
 
     console.log("🔍 Verificando status do pagamento para CPF:", cpf)
 
-    // URL da API externa - GET endpoint
-    const externalApiUrl = `https://api.agroderivative.tech/api/get-deposit-status/?cpf=${cpf}`
+    // URL da nova API - buscar perfil por CPF
+    const externalApiUrl = `https://api.agroderivative.tech/api/users/profile-by-cpf/?cpf=${cpf}`
 
     console.log("🔗 Fazendo requisição GET para:", externalApiUrl)
 
@@ -39,37 +39,70 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         {
-          success: true,
-          confirmed: true,
+          success: false,
+          confirmed: false,
           error: "Erro ao processar resposta da API",
-          details:"ssss" +textResponse,
+          details: textResponse,
         },
         { status: 200 },
       )
     }
 
     // Verificar diferentes cenários de resposta
-    if (response.status === 200) {
-    
-        console.log("✅ Pagamento confirmado!")
+    if (response.status === 200 && responseData) {
+      console.log("✅ Perfil do usuário encontrado!")
+
+      // Verificar se há valor de depósito registrado
+      const depositValue = responseData.deposit_value
+      console.log("💰 Valor do depósito encontrado:", depositValue)
+
+      if (depositValue && Number.parseFloat(depositValue) > 0) {
+        console.log("✅ Pagamento confirmado! Valor do depósito:", depositValue)
+
         return NextResponse.json(
           {
             success: true,
             confirmed: true,
             message: "Pagamento confirmado",
-            data: responseData,
+            data: {
+              user_id: responseData.id,
+              username: responseData.username,
+              email: responseData.email,
+              first_name: responseData.first_name,
+              last_name: responseData.last_name,
+              cpf: responseData.cpf,
+              whatsapp: responseData.whatsapp,
+              rg: responseData.rg,
+              deposit_value: responseData.deposit_value,
+              contract_generated_successfully: responseData.contract_generated_successfully,
+            },
           },
           { status: 200 },
         )
-      
+      } else {
+        console.log("⏳ Usuário encontrado, mas sem depósito confirmado ainda")
+        return NextResponse.json(
+          {
+            success: true,
+            confirmed: false,
+            message: "Usuário encontrado, mas pagamento ainda não foi processado",
+            data: {
+              user_id: responseData.id,
+              email: responseData.email,
+              deposit_value: responseData.deposit_value,
+            },
+          },
+          { status: 200 },
+        )
+      }
     } else if (response.status === 404) {
-      console.log("🔍 Depósito não encontrado (ainda não foi feito)")
+      console.log("🔍 Usuário não encontrado (CPF não cadastrado)")
       return NextResponse.json(
         {
           success: true,
-          confirmed: true,
-          message: "Depósito não encontrado",
-          data: responseData,
+          confirmed: false,
+          message: "Usuário não encontrado. Verifique se o CPF está correto.",
+          data: null,
         },
         { status: 200 },
       )
@@ -77,22 +110,22 @@ export async function POST(request: NextRequest) {
       console.log("❌ Erro na API externa:", response.status, responseData)
       return NextResponse.json(
         {
-          success: true,
-          confirmed: true,
+          success: false,
+          confirmed: false,
           error: `Erro na API externa: ${response.status}`,
           data: responseData,
         },
-        { status: 200 }, // Retornar 200 para não quebrar o polling
+        { status: 200 }, // Retornar 200 para não quebrar o fluxo
       )
     }
   } catch (error) {
     console.error("❌ Erro ao verificar status do pagamento:", error)
 
-    // Retornar erro mas com status 200 para não quebrar o polling
+    // Retornar erro mas com status 200 para não quebrar o fluxo
     return NextResponse.json(
       {
-        success: true,
-        confirmed: true,
+        success: false,
+        confirmed: false,
         error: "Erro interno do servidor",
         details: error.message,
         type: "payment_status_error",
