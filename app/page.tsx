@@ -28,7 +28,7 @@ import {
   EyeOff,
 } from "lucide-react"
 import { maskCPF, maskRG, maskPhone, maskDate, validateDate, unmaskValue } from "@/utils/input-masks"
-import { AVAILABLE_CRYPTOS, getPopularCryptos } from "@/utils/crypto-list"
+import { AVAILABLE_CRYPTOS } from "@/utils/crypto-list"
 
 export default function AgroDeriLanding() {
   const [showCheckout, setShowCheckout] = useState(false)
@@ -74,8 +74,8 @@ export default function AgroDeriLanding() {
   const checkoutRef = useRef<HTMLDivElement>(null)
   const qrCodeRef = useRef<HTMLCanvasElement>(null)
 
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showPassword, setShowConfirmPassword] = useState(false)
+  const [showConfirmPassword, setShowPassword] = useState(false)
 
   const packages = [
     {
@@ -185,6 +185,19 @@ export default function AgroDeriLanding() {
       generateRealPixCode()
     }
   }, [currentStep, amount, userData.cpf])
+
+  // Adicionar novos estados para o modal de login após os estados existentes:
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [loginData, setLoginData] = useState({
+    username: "",
+    password: "",
+  })
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [loginErrors, setLoginErrors] = useState({
+    username: "",
+    password: "",
+    general: "",
+  })
 
   // Modificar a função createContractDocument para usar a nova API
   const createContractDocument = async () => {
@@ -444,6 +457,86 @@ export default function AgroDeriLanding() {
     // Permitir letras, números e caracteres especiais
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
     return passwordRegex.test(password)
+  }
+
+  // Adicionar função de login após as funções existentes:
+  const handleLogin = async () => {
+    try {
+      setLoginLoading(true)
+      setLoginErrors({ username: "", password: "", general: "" })
+
+      // Validação básica
+      const errors = { username: "", password: "", general: "" }
+
+      if (!loginData.username.trim()) {
+        errors.username = "Email é obrigatório"
+      } else if (!validateEmail(loginData.username)) {
+        errors.username = "Email inválido"
+      }
+
+      if (!loginData.password.trim()) {
+        errors.password = "Senha é obrigatória"
+      }
+
+      if (errors.username || errors.password) {
+        setLoginErrors(errors)
+        return
+      }
+
+      console.log("🔐 Fazendo login...")
+
+      const response = await fetch("https://api.agroderivative.tech/api/users/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          username: loginData.username,
+          password: loginData.password,
+        }),
+      })
+
+      const result = await response.json()
+      console.log("📊 Resultado do login:", result)
+
+      if (response.ok) {
+        console.log("✅ Login realizado com sucesso!")
+
+        // Fechar modal
+        setShowLoginModal(false)
+
+        // Abrir nova aba com área do investidor
+        const investorUrl = `/investor-dashboard?token=${result.access || result.token || "logged"}&user=${encodeURIComponent(loginData.username)}`
+        window.open(investorUrl, "_blank")
+
+        // Limpar dados do formulário
+        setLoginData({ username: "", password: "" })
+      } else {
+        console.error("❌ Erro no login:", result)
+
+        // Tratar diferentes tipos de erro
+        if (result.non_field_errors) {
+          setLoginErrors({
+            ...errors,
+            general: Array.isArray(result.non_field_errors) ? result.non_field_errors[0] : result.non_field_errors,
+          })
+        } else if (result.detail) {
+          setLoginErrors({ ...errors, general: result.detail })
+        } else if (result.username) {
+          setLoginErrors({ ...errors, username: Array.isArray(result.username) ? result.username[0] : result.username })
+        } else if (result.password) {
+          setLoginErrors({ ...errors, password: Array.isArray(result.password) ? result.password[0] : result.password })
+        } else {
+          setLoginErrors({ ...errors, general: "Credenciais inválidas. Verifique seu email e senha." })
+        }
+      }
+    } catch (error) {
+      console.error("💥 Erro na requisição de login:", error)
+      setLoginErrors({ username: "", password: "", general: "Erro de conexão. Tente novamente." })
+    } finally {
+      setLoginLoading(false)
+    }
   }
 
   const validateForm = () => {
@@ -745,17 +838,23 @@ export default function AgroDeriLanding() {
                 ))}
               </div>
 
-              <div className="space-y-4">
+              {/* Na seção Hero, substituir o botão único por dois botões lado a lado: */}
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
-                  className="w-full lg:w-auto bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg"
+                  className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg"
                   onClick={scrollToCheckout}
                 >
                   Quero meus tokens AGD agora
                 </Button>
-                <p className="text-sm text-gray-500 flex items-center gap-2">
-                  ⏳ <span>Tempo limitado. Quando esse lote acabar, o preço muda.</span>
-                </p>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="flex-1 sm:flex-none border-green-600 text-green-600 hover:bg-green-50 px-8 py-4 text-lg"
+                  onClick={() => setShowLoginModal(true)}
+                >
+                  Acompanhar Investimento
+                </Button>
               </div>
             </div>
 
@@ -1196,143 +1295,6 @@ export default function AgroDeriLanding() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Seleção do método de pagamento */}
-                  <div className="space-y-4">
-                    <Label className="text-base font-medium">Escolha como pagar:</Label>
-
-                    {/* PIX Option */}
-                    <div
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        paymentMethod === "pix"
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                      onClick={() => setPaymentMethod("pix")}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-                          <span className="text-green-600 font-bold text-xs">PIX</span>
-                        </div>
-                        <div>
-                          <div className="font-medium">PIX</div>
-                          <div className="text-sm text-gray-500">Aprovação instantânea</div>
-                        </div>
-                        {paymentMethod === "pix" && <CheckCircle className="h-5 w-5 text-green-600 ml-auto" />}
-                      </div>
-                    </div>
-
-                    {/* Crypto Option */}
-                    <div
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        paymentMethod === "crypto"
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                      onClick={() => setPaymentMethod("crypto")}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                          <Coins className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium">Criptomoedas</div>
-                          <div className="text-sm text-gray-500">Bitcoin, Ethereum, USDT e mais</div>
-                        </div>
-                        {paymentMethod === "crypto" && <CheckCircle className="h-5 w-5 text-blue-600 ml-auto" />}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Seleção de Criptomoeda */}
-                  {paymentMethod === "crypto" && (
-                    <div className="space-y-4">
-                      <Label className="text-base font-medium">Escolha a criptomoeda:</Label>
-
-                      {/* Criptos Populares */}
-                      <div>
-                        <p className="text-sm text-gray-600 mb-3">Mais populares:</p>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {getPopularCryptos().map((crypto) => (
-                            <div
-                              key={crypto.coin}
-                              className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                                selectedCrypto === crypto.coin
-                                  ? "border-blue-500 bg-blue-50"
-                                  : "border-gray-200 hover:border-gray-300"
-                              }`}
-                              onClick={() => setSelectedCrypto(crypto.coin)}
-                            >
-                              <div className="flex items-center gap-2">
-                                <img
-                                  src={crypto.icon || "/placeholder.svg"}
-                                  alt={crypto.name}
-                                  className="w-6 h-6"
-                                  onError={(e) => {
-                                    e.target.src = "/placeholder.svg?height=24&width=24"
-                                  }}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-sm">{crypto.coin}</div>
-                                  <div className="text-xs text-gray-500 truncate">{crypto.name}</div>
-                                </div>
-                                {selectedCrypto === crypto.coin && (
-                                  <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Botão para mostrar todas as criptos */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowAllCryptos(!showAllCryptos)}
-                        className="w-full"
-                      >
-                        {showAllCryptos ? "Mostrar menos" : `Ver todas as ${AVAILABLE_CRYPTOS.length} criptomoedas`}
-                      </Button>
-
-                      {/* Todas as Criptomoedas */}
-                      {showAllCryptos && (
-                        <div className="max-h-60 overflow-y-auto border rounded-lg p-3">
-                          <div className="grid gap-2">
-                            {AVAILABLE_CRYPTOS.map((crypto) => (
-                              <div
-                                key={crypto.coin}
-                                className={`p-2 rounded cursor-pointer transition-all ${
-                                  selectedCrypto === crypto.coin
-                                    ? "bg-blue-100 border border-blue-300"
-                                    : "hover:bg-gray-50"
-                                }`}
-                                onClick={() => {
-                                  setSelectedCrypto(crypto.coin)
-                                  setShowAllCryptos(false)
-                                }}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={crypto.icon || "/placeholder.svg"}
-                                    alt={crypto.name}
-                                    className="w-5 h-5"
-                                    onError={(e) => {
-                                      e.target.src = "/placeholder.svg?height=20&width=20"
-                                    }}
-                                  />
-                                  <div className="flex-1">
-                                    <span className="font-medium text-sm">{crypto.coin}</span>
-                                    <span className="text-gray-500 text-sm ml-2">{crypto.name}</span>
-                                  </div>
-                                  {selectedCrypto === crypto.coin && <CheckCircle className="h-4 w-4 text-blue-600" />}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* Resumo do Investimento */}
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-blue-900 mb-2">Resumo do Investimento</h3>
@@ -1343,20 +1305,8 @@ export default function AgroDeriLanding() {
                       </div>
                       <div className="flex justify-between">
                         <span>Método:</span>
-                        <span className="capitalize">
-                          {paymentMethod === "pix"
-                            ? "PIX"
-                            : paymentMethod === "crypto" && selectedCrypto
-                              ? `${selectedCrypto}`
-                              : "Selecione um método"}
-                        </span>
+                        <span className="capitalize">PIX</span>
                       </div>
-                      {paymentMethod === "crypto" && selectedCrypto && (
-                        <div className="flex justify-between">
-                          <span>Criptomoeda:</span>
-                          <span>{AVAILABLE_CRYPTOS.find((c) => c.coin === selectedCrypto)?.name}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -1364,20 +1314,14 @@ export default function AgroDeriLanding() {
                     <Button variant="outline" onClick={handleBack} className="flex-1">
                       Voltar
                     </Button>
-                    <Button
-                      onClick={handlePayment}
-                      className="flex-1"
-                      disabled={loading || (paymentMethod === "crypto" && !selectedCrypto)}
-                    >
+                    <Button onClick={handlePayment} className="flex-1" disabled={loading}>
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {paymentMethod === "pix" ? "Gerando PIX..." : "Gerando endereço..."}
+                          Gerando PIX...
                         </>
-                      ) : paymentMethod === "pix" ? (
-                        "Gerar PIX"
                       ) : (
-                        "Gerar endereço crypto"
+                        "Gerar PIX"
                       )}
                     </Button>
                   </div>
@@ -1732,6 +1676,79 @@ export default function AgroDeriLanding() {
             )}
           </div>
         </section>
+      )}
+
+      {/* Modal de Login */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-2xl text-center">Acompanhar Investimento</CardTitle>
+              <CardDescription className="text-center">Faça login para acessar sua área do investidor</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loginErrors.general && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-600 text-sm">{loginErrors.general}</p>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="loginEmail">Email</Label>
+                <Input
+                  id="loginEmail"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={loginData.username}
+                  onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+                  className={loginErrors.username ? "border-red-500" : ""}
+                />
+                {loginErrors.username && <p className="text-red-500 text-sm mt-1">{loginErrors.username}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="loginPassword">Senha</Label>
+                <Input
+                  id="loginPassword"
+                  type="password"
+                  placeholder="Sua senha"
+                  value={loginData.password}
+                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                  className={loginErrors.password ? "border-red-500" : ""}
+                />
+                {loginErrors.password && <p className="text-red-500 text-sm mt-1">{loginErrors.password}</p>}
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowLoginModal(false)
+                    setLoginData({ username: "", password: "" })
+                    setLoginErrors({ username: "", password: "", general: "" })
+                  }}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleLogin}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  disabled={loginLoading}
+                >
+                  {loginLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    "Entrar"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Footer */}
