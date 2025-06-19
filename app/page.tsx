@@ -26,6 +26,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  ArrowLeft,
 } from "lucide-react"
 import { maskCPF, maskRG, maskPhone, maskDate, validateDate, unmaskValue } from "@/utils/input-masks"
 import { AVAILABLE_CRYPTOS } from "@/utils/crypto-list"
@@ -650,8 +651,8 @@ export default function AgroDeriLanding() {
           setCurrentStep(2)
         } else {
           console.error("❌ Erro no registro:", result)
-          // handleRegistrationErrors(result)
-          setCurrentStep(2)
+           handleRegistrationErrors(result)
+          //setCurrentStep(2)
         }
       } catch (error) {
         console.error("🌐 Erro de rede:", error)
@@ -731,8 +732,48 @@ export default function AgroDeriLanding() {
     }
   }
 
+  const resetCheckout = () => {
+    setCurrentStep(0)
+    setSelectedPackage("")
+    setAmount(0)
+    setUserData({
+      name: "",
+      email: "",
+      phone: "",
+      cpf: "",
+      rg: "",
+      birthday: "",
+      password: "",
+      confirmPassword: "",
+    })
+    setPaymentMethod("pix")
+    setPixCode("")
+    setQrCodeUrl("")
+    setPaymentString("")
+    setPaymentConfirmed(false)
+    setContractCreated(false)
+    setContractData(null)
+    setDocumentIdClicksign("")
+    setContractDownloadUrl("")
+    setFormErrors({
+      name: "",
+      email: "",
+      phone: "",
+      cpf: "",
+      rg: "",
+      birthday: "",
+      amount: "",
+      password: "",
+      confirmPassword: "",
+    })
+    setSelectedCrypto("")
+  }
+
   const handleBack = () => {
-    if (currentStep > 0) {
+    if (currentStep === 1) {
+      // Se estiver no step 1 (Dados), voltar para step 0 (Pacotes) e resetar
+      resetCheckout()
+    } else if (currentStep > 0) {
       setCurrentStep(currentStep - 1)
     }
   }
@@ -1657,13 +1698,13 @@ export default function AgroDeriLanding() {
                     )}
 
                     <div className="grid grid-cols-2 gap-4">
+                      <Button variant="outline" onClick={resetCheckout}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Novo Investimento
+                      </Button>
                       <Button variant="outline">
                         <Shield className="mr-2 h-4 w-4" />
                         Área do Investidor
-                      </Button>
-                      <Button variant="outline">
-                        <Coins className="mr-2 h-4 w-4" />
-                        Staking AGD
                       </Button>
                     </div>
                   </div>
@@ -1673,6 +1714,7 @@ export default function AgroDeriLanding() {
                       Seu contrato está disponível para download no formato DOCX. Após baixar, você pode revisar os
                       termos e aguardar as próximas instruções para assinatura digital. Bem-vindo à revolução do agro
                       tokenizado!
+                 
                     </p>
                   </div>
                 </CardContent>
