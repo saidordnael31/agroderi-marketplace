@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          confirmed: true,
+          confirmed: false,
           error: "Erro ao processar resposta da API",
           details:"ssss" +textResponse,
         },
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          confirmed: true,
+          confirmed: false,
           message: "Depósito não encontrado",
           data: responseData,
         },
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          confirmed: true,
+          confirmed: false,
           error: `Erro na API externa: ${response.status}`,
           data: responseData,
         },
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        confirmed: true,
+        confirmed: false,
         error: "Erro interno do servidor",
         details: error.message,
         type: "payment_status_error",

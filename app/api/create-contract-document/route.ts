@@ -94,6 +94,42 @@ export async function POST(request: NextRequest) {
         console.log("📥 URL de download extraída:", downloadUrl)
       }
 
+      // Salvar contato no HubSpot
+      try {
+        console.log("📞 Salvando contato no HubSpot...")
+
+        const hubspotData = {
+          properties: {
+            email: userData.email.trim(),
+            firstname: userData.name.trim(),
+            phone: userData.phone.trim(),
+            valor: `R$ ${amount.toLocaleString("pt-BR")}`,
+            utm_source: "agroderi_landing_page",
+          },
+        }
+
+        const hubspotResponse = await fetch("https://api.hubapi.com/crm/v3/objects/contacts", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer pat-na1-47a22de4-51d3-4683-b874-8c9ca56a4fd2",
+          },
+          body: JSON.stringify(hubspotData),
+        })
+
+        const hubspotResult = await hubspotResponse.json()
+
+        if (hubspotResponse.ok) {
+          console.log("✅ Contato salvo no HubSpot com sucesso:", hubspotResult.id)
+        } else {
+          console.error("❌ Erro ao salvar no HubSpot:", hubspotResult)
+          // Não falhar o processo principal se o HubSpot der erro
+        }
+      } catch (hubspotError) {
+        console.error("❌ Erro de conexão com HubSpot:", hubspotError)
+        // Não falhar o processo principal se o HubSpot der erro
+      }
+
       return NextResponse.json(
         {
           success: true,
