@@ -47,7 +47,7 @@ export default function InvestorDashboard() {
     try {
       setLoading(true)
       setError("")
-      console.log("📊 Buscando perfil do usuário com CPF:", cpf)
+   //   console.log("📊 Buscando perfil do usuário com CPF:", cpf)
 
       // Usar nossa API route ao invés da requisição direta
       const response = await fetch(`/api/get-user-profile?cpf=${cpf}`, {
@@ -57,11 +57,11 @@ export default function InvestorDashboard() {
         },
       })
 
-      console.log("📊 Status da resposta:", response.status)
+   //   console.log("📊 Status da resposta:", response.status)
 
       if (response.ok) {
         const profileData = await response.json()
-        console.log("📦 Dados do perfil:", profileData)
+     //   console.log("📦 Dados do perfil:", profileData)
 
         // Calcular informações adicionais baseadas nos dados
         const depositValue = Number.parseFloat(profileData.deposit_value || "0")
@@ -78,7 +78,7 @@ export default function InvestorDashboard() {
         })
       } else {
         const errorData = await response.json()
-        console.error("❌ Erro na API:", errorData)
+    //    console.error("❌ Erro na API:", errorData)
         setError(errorData.error || "Não foi possível carregar os dados do investimento")
       }
     } catch (error) {
@@ -92,7 +92,7 @@ export default function InvestorDashboard() {
   const handleWithdrawRequest = async () => {
     try {
       setWithdrawLoading(true)
-      console.log("💰 Solicitando resgate do investimento...")
+   //   console.log("💰 Solicitando resgate do investimento...")
 
       const response = await fetch("/api/request-withdraw/", {
         method: "POST",
@@ -106,10 +106,10 @@ export default function InvestorDashboard() {
         }),
       })
 
-      console.log("📊 Status da resposta de resgate:", response.status)
+   //   console.log("📊 Status da resposta de resgate:", response.status)
 
       const result = await response.json()
-      console.log("📦 Resultado do resgate:", result)
+   //   console.log("📦 Resultado do resgate:", result)
 
       if (result.success) {
         console.log("✅ Resgate solicitado com sucesso!")
@@ -129,7 +129,7 @@ export default function InvestorDashboard() {
   const handleGenerateContract = async () => {
     try {
       setContractGenerating(true)
-      console.log("📄 Gerando contrato para usuário existente...")
+    //  console.log("📄 Gerando contrato para usuário existente...")
 
       const response = await fetch("/api/create-contract-document/", {
         method: "POST",
@@ -148,13 +148,13 @@ export default function InvestorDashboard() {
         }),
       })
 
-      console.log("📊 Status da resposta de geração de contrato:", response.status)
+    //  console.log("📊 Status da resposta de geração de contrato:", response.status)
 
       const result = await response.json()
-      console.log("📦 Resultado da geração de contrato:", result)
+   //   console.log("📦 Resultado da geração de contrato:", result)
 
       if (result.success) {
-        console.log("✅ Contrato gerado com sucesso!")
+   //     console.log("✅ Contrato gerado com sucesso!")
         setContractGenerated(true)
 
         if (result.contract && result.contract.downloadUrl) {
@@ -173,7 +173,7 @@ export default function InvestorDashboard() {
         alert("Erro ao gerar contrato: " + (result.error || "Erro desconhecido"))
       }
     } catch (error) {
-      console.error("💥 Erro na geração de contrato:", error)
+   //   console.error("💥 Erro na geração de contrato:", error)
       alert("Erro de conexão ao gerar contrato. Tente novamente.")
     } finally {
       setContractGenerating(false)
