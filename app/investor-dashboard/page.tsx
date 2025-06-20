@@ -140,7 +140,7 @@ export default function InvestorDashboard() {
           userData: {
             name: `${userProfile.first_name} ${userProfile.last_name}`,
             email: userProfile.email,
-            cpf: userProfile.cpf,
+            cpf:maskCPF(userProfile.cpf),
             rg: userProfile.rg,
             phone: userProfile.whatsapp,
           },
