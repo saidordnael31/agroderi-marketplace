@@ -959,15 +959,42 @@ export default function AgroDeriLanding() {
             <div className="relative">
               <div className="bg-black rounded-2xl overflow-hidden shadow-2xl">
                 <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative">
+                  {/* Tentar carregar o vídeo local primeiro, com fallback */}
                   <video
                     className="w-full h-full object-cover"
                     controls
                     poster="/placeholder.svg?height=400&width=600&text=AgroDeri+Video"
                     preload="metadata"
+                    onError={(e) => {
+                      console.log("❌ Erro ao carregar vídeo local, usando placeholder")
+                      e.target.style.display = "none"
+                      e.target.nextElementSibling.style.display = "flex"
+                    }}
                   >
                     <source src="/videos/agroderi-hero-video.mp4" type="video/mp4" />
                     Seu navegador não suporta o elemento de vídeo.
                   </video>
+
+                  {/* Fallback quando o vídeo não carrega */}
+                  <div
+                    className="w-full h-full bg-gradient-to-br from-green-800 to-green-900 flex items-center justify-center absolute inset-0"
+                    style={{ display: "none" }}
+                  >
+                    <div className="text-center text-white">
+                      <div className="text-6xl mb-4">🎥</div>
+                      <h3 className="text-2xl font-bold mb-2">A Revolução do Agro Tokenizado</h3>
+                      <p className="text-lg opacity-90 mb-4">Veja como a tecnologia está transformando o agronegócio</p>
+                      <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 max-w-md mx-auto">
+                        <p className="text-sm">
+                          🌱 Commodities reais tokenizadas
+                          <br />💰 Acesso democrático ao agro
+                          <br />🔗 Blockchain transparente
+                          <br />📈 Liquidez instantânea
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="absolute bottom-4 left-4 text-white text-sm bg-black/50 px-2 py-1 rounded">
                     🎥 A revolução do agro tokenizado
                   </div>
