@@ -14,7 +14,6 @@ import {
   Star,
   Gift,
   Zap,
-  Play,
   ArrowDown,
   Shield,
   Target,
@@ -960,11 +959,17 @@ export default function AgroDeriLanding() {
             <div className="relative">
               <div className="bg-black rounded-2xl overflow-hidden shadow-2xl">
                 <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative">
-                  <Button size="lg" className="bg-white/20 hover:bg-white/30 text-white rounded-full p-6">
-                    <Play className="h-8 w-8 ml-1" />
-                  </Button>
-                  <div className="absolute bottom-4 left-4 text-white text-sm">
-                    🎥 VSL: A revolução do agro tokenizado (60s)
+                  <video
+                    className="w-full h-full object-cover"
+                    controls
+                    poster="/placeholder.svg?height=400&width=600&text=AgroDeri+Video"
+                    preload="metadata"
+                  >
+                    <source src="/videos/agroderi-hero-video.mp4" type="video/mp4" />
+                    Seu navegador não suporta o elemento de vídeo.
+                  </video>
+                  <div className="absolute bottom-4 left-4 text-white text-sm bg-black/50 px-2 py-1 rounded">
+                    🎥 A revolução do agro tokenizado
                   </div>
                 </div>
               </div>
