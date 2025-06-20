@@ -91,16 +91,14 @@ export default function InvestorDashboard() {
       setWithdrawLoading(true)
       console.log("💰 Solicitando resgate do investimento...")
 
-      const response = await fetch("https://api.agroderivative.tech/api/new-fiat-withdraw/", {
+      const response = await fetch("/api/request-withdraw/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
         },
         body: JSON.stringify({
           cpf: userProfile.cpf,
-          value: Number.parseFloat(userProfile.deposit_value),
+          value: userProfile.deposit_value,
           pixKey: userProfile.cpf,
         }),
       })
@@ -110,12 +108,12 @@ export default function InvestorDashboard() {
       const result = await response.json()
       console.log("📦 Resultado do resgate:", result)
 
-      if (response.ok) {
+      if (result.success) {
         console.log("✅ Resgate solicitado com sucesso!")
         setWithdrawSuccess(true)
       } else {
         console.error("❌ Erro ao solicitar resgate:", result)
-        alert("Erro ao solicitar resgate: " + (result.error || result.message || "Erro desconhecido"))
+        alert("Erro ao solicitar resgate: " + (result.error || "Erro desconhecido"))
       }
     } catch (error) {
       console.error("💥 Erro na solicitação de resgate:", error)
