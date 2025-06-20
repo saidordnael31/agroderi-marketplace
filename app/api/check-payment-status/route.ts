@@ -5,12 +5,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { cpf } = body
 
-    console.log("🔍 Verificando status do pagamento para CPF:", cpf)
+ //   console.log("🔍 Verificando status do pagamento para CPF:", cpf)
 
     // URL da nova API - buscar perfil por CPF
     const externalApiUrl = `https://api.agroderivative.tech/api/users/profile-by-cpf/?cpf=${cpf}`
 
-    console.log("🔗 Fazendo requisição GET para:", externalApiUrl)
+//    console.log("🔗 Fazendo requisição GET para:", externalApiUrl)
 
     const headers = {
       Accept: "application/json",
@@ -25,17 +25,17 @@ export async function POST(request: NextRequest) {
       headers: headers,
     })
 
-    console.log("📊 Status da resposta externa:", response.status)
-    console.log("📊 Headers da resposta:", Object.fromEntries(response.headers.entries()))
+ //   console.log("📊 Status da resposta externa:", response.status)
+ //   console.log("📊 Headers da resposta:", Object.fromEntries(response.headers.entries()))
 
     let responseData
     try {
       responseData = await response.json()
-      console.log("📦 Dados da resposta externa:", JSON.stringify(responseData, null, 2))
+  //    console.log("📦 Dados da resposta externa:", JSON.stringify(responseData, null, 2))
     } catch (parseError) {
       console.error("❌ Erro ao fazer parse da resposta:", parseError)
       const textResponse = await response.text()
-      console.log("📄 Resposta como texto:", textResponse)
+   //   console.log("📄 Resposta como texto:", textResponse)
 
       return NextResponse.json(
         {
@@ -50,11 +50,11 @@ export async function POST(request: NextRequest) {
 
     // Verificar diferentes cenários de resposta
     if (response.status === 200 && responseData) {
-      console.log("✅ Perfil do usuário encontrado!")
+   //   console.log("✅ Perfil do usuário encontrado!")
 
       // Verificar se há valor de depósito registrado
       const depositValue = responseData.deposit_value
-      console.log("💰 Valor do depósito encontrado:", depositValue)
+    //  console.log("💰 Valor do depósito encontrado:", depositValue)
 
       if (depositValue && Number.parseFloat(depositValue) > 0) {
         console.log("✅ Pagamento confirmado! Valor do depósito:", depositValue)
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
           { status: 200 },
         )
       } else {
-        console.log("⏳ Usuário encontrado, mas sem depósito confirmado ainda")
+   //     console.log("⏳ Usuário encontrado, mas sem depósito confirmado ainda")
         return NextResponse.json(
           {
             success: true,
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         )
       }
     } else if (response.status === 404) {
-      console.log("🔍 Usuário não encontrado (CPF não cadastrado)")
+   ///   console.log("🔍 Usuário não encontrado (CPF não cadastrado)")
       return NextResponse.json(
         {
           success: true,
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         { status: 200 },
       )
     } else {
-      console.log("❌ Erro na API externa:", response.status, responseData)
+    //  console.log("❌ Erro na API externa:", response.status, responseData)
       return NextResponse.json(
         {
           success: false,
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (error) {
-    console.error("❌ Erro ao verificar status do pagamento:", error)
+   // console.error("❌ Erro ao verificar status do pagamento:", error)
 
     // Retornar erro mas com status 200 para não quebrar o fluxo
     return NextResponse.json(

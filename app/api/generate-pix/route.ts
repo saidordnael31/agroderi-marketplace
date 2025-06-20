@@ -5,12 +5,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { value, cpf } = body
 
-    console.log("📝 Dados recebidos para gerar PIX:", { value, cpf })
+//    console.log("📝 Dados recebidos para gerar PIX:", { value, cpf })
 
     // URL da API externa
     const externalApiUrl = "https://api.agroderivative.tech/api/generate-fiat-deposit-qrcode/"
 
-    console.log("🔗 Fazendo requisição para:", externalApiUrl)
+ //   console.log("🔗 Fazendo requisição para:", externalApiUrl)
 
     const headers = {
       "Content-Type": "application/json",
@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
       cpf: cpf,
     }
 
-    console.log("📋 Dados enviados:", data)
-    console.log("📋 Headers:", headers)
+ //   console.log("📋 Dados enviados:", data)
+ //   console.log("📋 Headers:", headers)
 
     // Fazer a requisição para o servidor externo
     const response = await fetch(externalApiUrl, {
@@ -33,18 +33,18 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(data),
     })
 
-    console.log("📊 Status da resposta externa:", response.status)
-    console.log("📊 Headers da resposta:", Object.fromEntries(response.headers.entries()))
+ //   console.log("📊 Status da resposta externa:", response.status)
+//    console.log("📊 Headers da resposta:", Object.fromEntries(response.headers.entries()))
 
     const responseData = await response.json()
-    console.log("📦 Dados da resposta externa completos:", JSON.stringify(responseData, null, 2))
+//    console.log("📦 Dados da resposta externa completos:", JSON.stringify(responseData, null, 2))
 
     if (response.ok) {
       // Verificar se os campos necessários estão presentes
-      console.log("🔍 Verificando campos da resposta:")
+////      console.log("🔍 Verificando campos da resposta:")
       console.log("- qrCode:", responseData.qrCode ? "✅ Presente" : "❌ Ausente")
 
-      console.log("- paymentString:", responseData.paymentString ? "✅ Presente" : "❌ Ausente")
+//      console.log("- paymentString:", responseData.paymentString ? "✅ Presente" : "❌ Ausente")
 
       // Retornar resposta padronizada
       return NextResponse.json(
@@ -62,11 +62,11 @@ export async function POST(request: NextRequest) {
         { status: 200 },
       )
     } else {
-      console.error("❌ Erro na API externa:", responseData)
+////      console.error("❌ Erro na API externa:", responseData)
       return NextResponse.json(responseData, { status: response.status })
     }
   } catch (error) {
-    console.error("❌ Erro no proxy de geração PIX:", error)
+  //  console.error("❌ Erro no proxy de geração PIX:", error)
 
     // Retornar erro detalhado
     return NextResponse.json(

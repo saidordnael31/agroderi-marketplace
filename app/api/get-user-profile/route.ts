@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "CPF é obrigatório" }, { status: 400 })
     }
 
-    console.log("🔍 Buscando perfil para CPF:", cpf)
+ //   console.log("🔍 Buscando perfil para CPF:", cpf)
 
     const response = await fetch(`https://api.agroderivative.tech/api/users/profile-by-cpf/?cpf=${cpf}`, {
       method: "GET",
@@ -19,16 +19,16 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    console.log("📊 Status da resposta da API externa:", response.status)
+ //   console.log("📊 Status da resposta da API externa:", response.status)
 
     if (response.ok) {
       const profileData = await response.json()
-      console.log("✅ Dados do perfil obtidos com sucesso")
+//      console.log("✅ Dados do perfil obtidos com sucesso")
 
       return NextResponse.json(profileData)
     } else {
       const errorData = await response.text()
-      console.error("❌ Erro na API externa:", errorData)
+   //   console.error("❌ Erro na API externa:", errorData)
 
       return NextResponse.json({ error: "Usuário não encontrado ou erro na API" }, { status: response.status })
     }

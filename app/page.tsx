@@ -210,7 +210,7 @@ export default function AgroDeriLanding() {
     const handleMessage = (event) => {
       if (event.data.type === "PREFILL_INVESTMENT_DATA") {
         const data = event.data.data
-        console.log("📝 Pré-preenchendo dados do usuário logado:", data)
+       // console.log("📝 Pré-preenchendo dados do usuário logado:", data)
 
         // Marcar como usuário pré-cadastrado
         setIsPrefilledUser(true)
@@ -274,7 +274,7 @@ export default function AgroDeriLanding() {
     if (returnUrl && userData) {
       try {
         const user = JSON.parse(userData)
-        console.log("🔄 Usuário retornando da área do investidor:", user.name)
+       // console.log("🔄 Usuário retornando da área do investidor:", user.name)
 
         // Mostrar mensagem de boas-vindas de volta
         setTimeout(() => {
@@ -285,7 +285,7 @@ export default function AgroDeriLanding() {
         localStorage.removeItem("agroDeriReturnUrl")
         localStorage.removeItem("agroDeriUserData")
       } catch (error) {
-        console.error("Erro ao processar dados de retorno:", error)
+      //  console.error("Erro ao processar dados de retorno:", error)
       }
     }
   }, [])
@@ -293,7 +293,7 @@ export default function AgroDeriLanding() {
   // Modificar a função createContractDocument para usar a nova API
   const createContractDocument = async () => {
     try {
-      console.log("📄 Criando contrato completo...")
+    //  console.log("📄 Criando contrato completo...")
       setLoading(true)
 
       const response = await fetch("/api/create-contract-document/", {
@@ -308,25 +308,25 @@ export default function AgroDeriLanding() {
       })
 
       const result = await response.json()
-      console.log("📄 Resultado da criação do contrato:", result)
+    //  console.log("📄 Resultado da criação do contrato:", result)
 
       if (result.success) {
-        console.log("✅ Contrato completo criado com sucesso!")
+    //    console.log("✅ Contrato completo criado com sucesso!")
         setContractCreated(true)
         setContractData(result.contract)
 
         // Extrair IDs importantes da nova resposta
         if (result.contract) {
           if (result.contract.envelope_id) {
-            console.log("📋 Envelope ID:", result.contract.envelope_id)
+       //     console.log("📋 Envelope ID:", result.contract.envelope_id)
           }
           if (result.contract.document_id) {
             setDocumentIdClicksign(result.contract.document_id)
-            console.log("📋 Document ID:", result.contract.document_id)
+      //      console.log("📋 Document ID:", result.contract.document_id)
           }
           if (result.contract.downloadUrl) {
             setContractDownloadUrl(result.contract.downloadUrl)
-            console.log("📥 URL de download do contrato:", result.contract.downloadUrl)
+     //       console.log("📥 URL de download do contrato:", result.contract.downloadUrl)
           }
         }
 
@@ -349,7 +349,7 @@ export default function AgroDeriLanding() {
   const handlePaymentConfirmation = async () => {
     try {
       setCheckingPayment(true)
-      console.log("🔍 Verificando status do pagamento manualmente...")
+    //  console.log("🔍 Verificando status do pagamento manualmente...")
 
       const response = await fetch("/api/check-payment-status/", {
         method: "POST",
@@ -361,13 +361,13 @@ export default function AgroDeriLanding() {
         }),
       })
 
-      console.log("📊 Status da resposta:", response.status)
+      //console.log("📊 Status da resposta:", response.status)
 
       const result = await response.json()
-      console.log("📦 Resultado completo:", result)
+     // console.log("📦 Resultado completo:", result)
 
       if (result.success && result.confirmed) {
-        console.log("✅ Pagamento confirmado!")
+      //  console.log("✅ Pagamento confirmado!")
         setPaymentConfirmed(true)
 
         // Criar documento de contrato
@@ -378,11 +378,11 @@ export default function AgroDeriLanding() {
           setCurrentStep(3)
         }
       } else {
-        console.log("❌ Pagamento não confirmado ainda")
+      ///  console.log("❌ Pagamento não confirmado ainda")
         alert("Pagamento ainda não foi identificado. Aguarde alguns minutos e tente novamente.")
       }
     } catch (error) {
-      console.error("❌ Erro ao verificar status do pagamento:", error)
+   //   console.error("❌ Erro ao verificar status do pagamento:", error)
       alert("Erro ao verificar pagamento. Tente novamente.")
     } finally {
       setCheckingPayment(false)
@@ -392,7 +392,7 @@ export default function AgroDeriLanding() {
   const generateRealPixCode = async () => {
     try {
       setLoading(true)
-      console.log("🔄 Gerando PIX real...")
+   //   console.log("🔄 Gerando PIX real...")
 
       const response = await fetch("/api/generate-pix/", {
         method: "POST",
@@ -405,32 +405,32 @@ export default function AgroDeriLanding() {
         }),
       })
 
-      console.log("📊 Status da resposta:", response.status)
+   //   console.log("📊 Status da resposta:", response.status)
 
       const result = await response.json()
-      console.log("📦 Resposta completa da API PIX:", JSON.stringify(result, null, 2))
+   //   console.log("📦 Resposta completa da API PIX:", JSON.stringify(result, null, 2))
 
       if (response.ok && result.success) {
-        console.log("✅ PIX gerado com sucesso!")
+   //     console.log("✅ PIX gerado com sucesso!")
 
         // Verificar se temos QR Code
         if (result.qrCode) {
-          console.log("🖼️ QR Code encontrado:", result.qrCode)
+   //       console.log("🖼️ QR Code encontrado:", result.qrCode)
           setQrCodeUrl(result.qrCode)
         } else {
-          console.log("⚠️ QR Code não encontrado na resposta, gerando fallback...")
+    //      console.log("⚠️ QR Code não encontrado na resposta, gerando fallback...")
           generateFallbackPixCode()
         }
 
         // Verificar se temos Payment String
         if (result.paymentString) {
-          console.log("💳 Payment String encontrada:", result.paymentString.substring(0, 50) + "...")
+    //      console.log("💳 Payment String encontrada:", result.paymentString.substring(0, 50) + "...")
           setPaymentString(result.paymentString)
         } else {
-          console.log("⚠️ Payment String não encontrada na resposta")
+    //      console.log("⚠️ Payment String não encontrada na resposta")
           // Usar dados originais se disponível
           if (result.originalData) {
-            console.log("🔍 Tentando extrair dados da resposta original...")
+     //       console.log("🔍 Tentando extrair dados da resposta original...")
             const originalData = result.originalData
 
             // Tentar diferentes campos possíveis
@@ -439,7 +439,7 @@ export default function AgroDeriLanding() {
 
             for (const field of possibleQrFields) {
               if (originalData[field]) {
-                console.log(`📸 QR Code encontrado em ${field}:`, originalData[field])
+       //         console.log(`📸 QR Code encontrado em ${field}:`, originalData[field])
                 setQrCodeUrl(originalData[field])
                 break
               }
@@ -447,7 +447,7 @@ export default function AgroDeriLanding() {
 
             for (const field of possibleStringFields) {
               if (originalData[field]) {
-                console.log(`💳 Payment String encontrada em ${field}:`, originalData[field].substring(0, 50) + "...")
+         //       console.log(`💳 Payment String encontrada em ${field}:`, originalData[field].substring(0, 50) + "...")
                 setPaymentString(originalData[field])
                 break
               }
@@ -460,12 +460,12 @@ export default function AgroDeriLanding() {
           }
         }
       } else {
-        console.error("❌ Erro ao gerar PIX:", result)
+   //     console.error("❌ Erro ao gerar PIX:", result)
         alert("Erro ao gerar PIX: " + (result.error || "Erro desconhecido"))
         generateFallbackPixCode()
       }
     } catch (error) {
-      console.error("💥 Erro na geração do PIX:", error)
+  //    console.error("💥 Erro na geração do PIX:", error)
       alert("Erro de conexão ao gerar PIX. Usando código de exemplo.")
       generateFallbackPixCode()
     } finally {
@@ -474,19 +474,19 @@ export default function AgroDeriLanding() {
   }
 
   const generateFallbackPixCode = () => {
-    console.log("🔄 Gerando PIX de fallback...")
+ //   console.log("🔄 Gerando PIX de fallback...")
 
     // PIX simulado como fallback
     const pixCodeGenerated = `00020126580014br.gov.bcb.pix0136${userData.email.replace("@", "").replace(".", "")}520400005303986540${amount.toFixed(2)}5802BR5925AGRODERI TECNOLOGIA LTDA6009SAO PAULO62070503***6304ABCD`
     setPaymentString(pixCodeGenerated)
 
-    console.log("💳 PIX de fallback gerado:", pixCodeGenerated.substring(0, 50) + "...")
+ //   console.log("💳 PIX de fallback gerado:", pixCodeGenerated.substring(0, 50) + "...")
 
     // Gerar QR Code usando API externa
     const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(pixCodeGenerated)}`
     setQrCodeUrl(qrCodeApiUrl)
 
-    console.log("🖼️ QR Code de fallback gerado:", qrCodeApiUrl)
+//    console.log("🖼️ QR Code de fallback gerado:", qrCodeApiUrl)
   }
 
   const copyPixCode = async () => {
@@ -494,7 +494,7 @@ export default function AgroDeriLanding() {
       await navigator.clipboard.writeText(paymentString)
       alert("Código PIX copiado!")
     } catch (err) {
-      console.error("Erro ao copiar:", err)
+//      console.error("Erro ao copiar:", err)
       alert("Erro ao copiar código PIX")
     }
   }
@@ -574,7 +574,7 @@ export default function AgroDeriLanding() {
         return
       }
 
-      console.log("🔐 Fazendo login...")
+  //    console.log("🔐 Fazendo login...")
 
       const response = await fetch("https://api.agroderivative.tech/api/users/login/", {
         method: "POST",
@@ -589,11 +589,11 @@ export default function AgroDeriLanding() {
       })
 
       const result = await response.json()
-      console.log("📊 Resultado do login:", result)
+  //    console.log("📊 Resultado do login:", result)
 
       if (response.ok) {
-        console.log("✅ Login realizado com sucesso!")
-        console.log("📊 Dados do login:", result)
+   //     console.log("✅ Login realizado com sucesso!")
+     //   console.log("📊 Dados do login:", result)
 
         // Fechar modal
         setShowLoginModal(false)
@@ -642,12 +642,12 @@ export default function AgroDeriLanding() {
             )
           }
         } else {
-          console.log("💻 Desktop detectado, usando nova aba")
+      //    console.log("💻 Desktop detectado, usando nova aba")
           // Desktop - usar nova aba normalmente
           const newWindow = window.open(investorUrl, "_blank")
 
           if (!newWindow) {
-            console.log("🚫 Pop-up bloqueado no desktop")
+     //       console.log("🚫 Pop-up bloqueado no desktop")
             alert("Pop-ups estão bloqueados. Por favor, permita pop-ups para este site e tente novamente.")
           } else {
             alert(
@@ -659,7 +659,7 @@ export default function AgroDeriLanding() {
         // Limpar dados do formulário
         setLoginData({ username: "", password: "" })
       } else {
-        console.error("❌ Erro no login:", result)
+    //    console.error("❌ Erro no login:", result)
 
         // Tratar diferentes tipos de erro
         if (result.non_field_errors) {
@@ -678,7 +678,7 @@ export default function AgroDeriLanding() {
         }
       }
     } catch (error) {
-      console.error("💥 Erro na requisição de login:", error)
+    //  console.error("💥 Erro na requisição de login:", error)
       setLoginErrors({ username: "", password: "", general: "Erro de conexão. Tente novamente." })
     } finally {
       setLoginLoading(false)
@@ -763,7 +763,7 @@ export default function AgroDeriLanding() {
 
       // Se é usuário pré-cadastrado, pular registro
       if (isPrefilledUser) {
-        console.log("✅ Usuário já cadastrado, pulando registro")
+  //      console.log("✅ Usuário já cadastrado, pulando registro")
         setCurrentStep(2)
         return
       }
@@ -785,7 +785,7 @@ export default function AgroDeriLanding() {
         birthday: userData.birthday,
       }
 
-      console.log("📝 Dados de registro:", registrationData)
+  //    console.log("📝 Dados de registro:", registrationData)
 
       try {
         const response = await fetch("https://api.agroderivative.tech/api/users/register/", {
@@ -800,19 +800,19 @@ export default function AgroDeriLanding() {
         const result = await response.json()
 
         if (response.ok) {
-          console.log("✅ Usuário registrado com sucesso!", result)
+   //       console.log("✅ Usuário registrado com sucesso!", result)
           alert("Registro bem-sucedido!")
           setCurrentStep(2)
         } else {
-          console.error("❌ Erro no registro:", result)
+    //      console.error("❌ Erro no registro:", result)
           handleRegistrationErrors(result)
         }
       } catch (error) {
-        console.error("🌐 Erro de rede:", error)
+   //     console.error("🌐 Erro de rede:", error)
         alert("Erro de conexão. Tente novamente.")
       }
     } catch (error) {
-      console.error("💥 Erro geral:", error)
+  //    console.error("💥 Erro geral:", error)
       alert("Erro inesperado. Tente novamente.")
     } finally {
       setLoading(false)

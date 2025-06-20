@@ -5,12 +5,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { cpf, value, pixKey } = body
 
-    console.log("💰 Dados recebidos para resgate:", { cpf, value, pixKey })
+ //   console.log("💰 Dados recebidos para resgate:", { cpf, value, pixKey })
 
     // URL da API externa
     const externalApiUrl = "https://api.agroderivative.tech/api/new-fiat-withdraw/"
 
-    console.log("🔗 Fazendo requisição para:", externalApiUrl)
+//    console.log("🔗 Fazendo requisição para:", externalApiUrl)
 
     const headers = {
       "Content-Type": "application/json",
@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
       pixKey: pixKey,
     }
 
-    console.log("📋 Dados enviados:", data)
-    console.log("📋 Headers:", headers)
+ //   console.log("📋 Dados enviados:", data)
+ //   console.log("📋 Headers:", headers)
 
     // Fazer a requisição para o servidor externo
     const response = await fetch(externalApiUrl, {
@@ -34,14 +34,14 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(data),
     })
 
-    console.log("📊 Status da resposta externa:", response.status)
-    console.log("📊 Headers da resposta:", Object.fromEntries(response.headers.entries()))
+ //   console.log("📊 Status da resposta externa:", response.status)
+ //   console.log("📊 Headers da resposta:", Object.fromEntries(response.headers.entries()))
 
     const responseData = await response.json()
-    console.log("📦 Dados da resposta externa completos:", JSON.stringify(responseData, null, 2))
+ //   console.log("📦 Dados da resposta externa completos:", JSON.stringify(responseData, null, 2))
 
     if (response.ok) {
-      console.log("✅ Resgate solicitado com sucesso!")
+  //    console.log("✅ Resgate solicitado com sucesso!")
 
       return NextResponse.json(
         {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         { status: 200 },
       )
     } else {
-      console.error("❌ Erro na API externa:", responseData)
+    //  console.error("❌ Erro na API externa:", responseData)
       return NextResponse.json(
         {
           success: false,
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (error) {
-    console.error("❌ Erro no proxy de resgate:", error)
+ //   console.error("❌ Erro no proxy de resgate:", error)
 
     // Retornar erro detalhado
     return NextResponse.json(

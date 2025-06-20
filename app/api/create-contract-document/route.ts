@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { userData, amount } = body
 
-    console.log("📄 Criando contrato completo para:", userData.name)
+ //   console.log("📄 Criando contrato completo para:", userData.name)
 
     // Obter data atual para o contrato
     const now = new Date()
@@ -26,12 +26,12 @@ export async function POST(request: NextRequest) {
     ]
     const month = months[now.getMonth()]
 
-    console.log("📅 Data do contrato:", `${day} de ${month}`)
+  //  console.log("📅 Data do contrato:", `${day} de ${month}`)
 
     // URL da nova API
     const externalApiUrl = "https://api.agroderivative.tech/api/contracts/documents/create_full_contract/"
 
-    console.log("🔗 Fazendo requisição para:", externalApiUrl)
+  //  console.log("🔗 Fazendo requisição para:", externalApiUrl)
 
     const headers = {
       "Content-Type": "application/json",
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         "Seu contrato de investimento AGD está pronto para assinatura. Clique no link para assinar!",
     }
 
-    console.log("📋 Dados do contrato completo:", JSON.stringify(contractData, null, 2))
+  //  console.log("📋 Dados do contrato completo:", JSON.stringify(contractData, null, 2))
 
     // Fazer a requisição para o servidor externo
     const response = await fetch(externalApiUrl, {
@@ -75,10 +75,10 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(contractData),
     })
 
-    console.log("📊 Status da resposta externa:", response.status)
+  //  console.log("📊 Status da resposta externa:", response.status)
 
     const responseData = await response.json()
-    console.log("📦 Dados da resposta externa:", JSON.stringify(responseData, null, 2))
+ //   console.log("📦 Dados da resposta externa:", JSON.stringify(responseData, null, 2))
 
     if (response.ok) {
       console.log("✅ Contrato completo criado com sucesso!")
