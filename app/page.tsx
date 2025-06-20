@@ -1556,6 +1556,21 @@ export default function AgroDeriLanding() {
                       </div>
                     </div>
                   </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">ℹ️</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-800 mb-1">Processamento do PIX</p>
+                        <p className="text-blue-700">
+                          O PIX pode levar alguns minutos para ser processado pelo sistema bancário. Fique tranquilo!
+                          Após realizar o pagamento, aguarde alguns instantes e clique em "Já fiz o pagamento" para
+                          verificar o status.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="flex gap-4">
                     <Button variant="outline" onClick={handleBack} className="flex-1">
