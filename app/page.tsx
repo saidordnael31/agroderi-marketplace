@@ -72,6 +72,9 @@ export default function AgroDeriLanding() {
   const [selectedCrypto, setSelectedCrypto] = useState("")
   const [showAllCryptos, setShowAllCryptos] = useState(false)
 
+  // Adicionar estado para controlar se é usuário pré-cadastrado
+  const [isPrefilledUser, setIsPrefilledUser] = useState(false)
+
   const checkoutRef = useRef<HTMLDivElement>(null)
   const qrCodeRef = useRef<HTMLCanvasElement>(null)
 
@@ -206,6 +209,9 @@ export default function AgroDeriLanding() {
       if (event.data.type === "PREFILL_INVESTMENT_DATA") {
         const data = event.data.data
         console.log("📝 Pré-preenchendo dados do usuário logado:", data)
+
+        // Marcar como usuário pré-cadastrado
+        setIsPrefilledUser(true)
 
         // Pré-preencher os dados do usuário
         setUserData({
@@ -607,8 +613,6 @@ export default function AgroDeriLanding() {
     }
 
     // Só validar senha se não for usuário pré-cadastrado
-    const isPrefilledUser = !userData.password && !userData.confirmPassword
-
     if (!isPrefilledUser) {
       if (!userData.password.trim()) {
         errors.password = "Senha é obrigatória"
@@ -659,8 +663,8 @@ export default function AgroDeriLanding() {
     try {
       setLoading(true)
 
-      // Se os campos de senha estão vazios, significa que é um usuário já cadastrado
-      if (!userData.password && !userData.confirmPassword) {
+      // Se é usuário pré-cadastrado, pular registro
+      if (isPrefilledUser) {
         console.log("✅ Usuário já cadastrado, pulando registro")
         setCurrentStep(2)
         return
@@ -818,6 +822,7 @@ export default function AgroDeriLanding() {
       confirmPassword: "",
     })
     setSelectedCrypto("")
+    setIsPrefilledUser(false) // Resetar flag de usuário pré-cadastrado
   }
 
   const handleBack = () => {
@@ -1288,7 +1293,7 @@ export default function AgroDeriLanding() {
                   </div>
 
                   {/* Só mostrar campos de senha se não for usuário pré-cadastrado */}
-                  {!userData.password && !userData.confirmPassword ? (
+                  {isPrefilledUser ? (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-start gap-3">
                         <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
@@ -1385,7 +1390,7 @@ export default function AgroDeriLanding() {
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Criando conta...
+                          {isPrefilledUser ? "Validando..." : "Criando conta..."}
                         </>
                       ) : (
                         <>
