@@ -80,6 +80,9 @@ export default function AgroDeriLanding() {
   const [showPassword, setShowConfirmPassword] = useState(false)
   const [showConfirmPassword, setShowPassword] = useState(false)
 
+  // Adicionar hook para detectar mobile após os outros estados
+  const [isMobile, setIsMobile] = useState(false)
+
   const packages = [
     {
       id: "starter",
@@ -242,6 +245,48 @@ export default function AgroDeriLanding() {
 
     return () => {
       window.removeEventListener("message", handleMessage)
+    }
+  }, [])
+
+  // Adicionar useEffect para detectar mobile após os useEffects existentes
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+        userAgent.toLowerCase(),
+      )
+      const isSmallScreen = window.innerWidth <= 768
+      setIsMobile(isMobileDevice || isSmallScreen)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  // Adicionar useEffect para verificar retorno do localStorage
+  useEffect(() => {
+    // Verificar se o usuário está retornando da área do investidor
+    const returnUrl = localStorage.getItem("agroDeriReturnUrl")
+    const userData = localStorage.getItem("agroDeriUserData")
+
+    if (returnUrl && userData) {
+      try {
+        const user = JSON.parse(userData)
+        console.log("🔄 Usuário retornando da área do investidor:", user.name)
+
+        // Mostrar mensagem de boas-vindas de volta
+        setTimeout(() => {
+          alert(`Olá novamente, ${user.name}! Você retornou da área do investidor.`)
+        }, 1000)
+
+        // Limpar dados salvos
+        localStorage.removeItem("agroDeriReturnUrl")
+        localStorage.removeItem("agroDeriUserData")
+      } catch (error) {
+        console.error("Erro ao processar dados de retorno:", error)
+      }
     }
   }, [])
 
@@ -553,9 +598,63 @@ export default function AgroDeriLanding() {
         // Fechar modal
         setShowLoginModal(false)
 
-        // Abrir nova aba com área do investidor passando o CPF
+        // URL da área do investidor
         const investorUrl = `/investor-dashboard?token=${result.token}&user=${encodeURIComponent(loginData.username)}&cpf=${result.cpf}&user_id=${result.user_id}`
-        window.open(investorUrl, "_blank")
+
+        // Estratégia diferente para mobile
+        if (isMobile) {
+          console.log("📱 Dispositivo móvel detectado, usando redirecionamento direto")
+
+          // Tentar window.open primeiro
+          const newWindow = window.open(investorUrl, "_blank")
+
+          // Se falhar (bloqueado), usar redirecionamento na mesma aba
+          if (!newWindow || newWindow.closed || typeof newWindow.closed == "undefined") {
+            console.log("🚫 Pop-up bloqueado, redirecionando na mesma aba")
+
+            // Mostrar confirmação antes de redirecionar
+            const confirmRedirect = confirm(
+              `Olá ${result.first_name || loginData.username}!\n\n` +
+                "Você será redirecionado para sua área do investidor. " +
+                "Para voltar a esta página, use o botão 'Voltar' do navegador.\n\n" +
+                "Deseja continuar?",
+            )
+
+            if (confirmRedirect) {
+              // Salvar dados no localStorage para possível retorno
+              localStorage.setItem("agroDeriReturnUrl", window.location.href)
+              localStorage.setItem(
+                "agroDeriUserData",
+                JSON.stringify({
+                  name: result.first_name || loginData.username,
+                  email: loginData.username,
+                }),
+              )
+
+              // Redirecionar na mesma aba
+              window.location.href = investorUrl
+            }
+          } else {
+            console.log("✅ Nova aba aberta com sucesso")
+            // Mostrar mensagem de sucesso
+            alert(
+              `Bem-vindo, ${result.first_name || loginData.username}! Sua área do investidor foi aberta em uma nova aba.`,
+            )
+          }
+        } else {
+          console.log("💻 Desktop detectado, usando nova aba")
+          // Desktop - usar nova aba normalmente
+          const newWindow = window.open(investorUrl, "_blank")
+
+          if (!newWindow) {
+            console.log("🚫 Pop-up bloqueado no desktop")
+            alert("Pop-ups estão bloqueados. Por favor, permita pop-ups para este site e tente novamente.")
+          } else {
+            alert(
+              `Bem-vindo, ${result.first_name || loginData.username}! Sua área do investidor foi aberta em uma nova aba.`,
+            )
+          }
+        }
 
         // Limpar dados do formulário
         setLoginData({ username: "", password: "" })
