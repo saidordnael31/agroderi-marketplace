@@ -28,6 +28,9 @@ export default function InvestorDashboard() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [withdrawLoading, setWithdrawLoading] = useState(false)
   const [withdrawSuccess, setWithdrawSuccess] = useState(false)
+  const [contractGenerating, setContractGenerating] = useState(false)
+  const [contractGenerated, setContractGenerated] = useState(false)
+  const [contractDownloadUrl, setContractDownloadUrl] = useState("")
 
   const userEmail = searchParams.get("user")
   const token = searchParams.get("token")
@@ -120,6 +123,60 @@ export default function InvestorDashboard() {
       alert("Erro de conexão ao solicitar resgate. Tente novamente.")
     } finally {
       setWithdrawLoading(false)
+    }
+  }
+
+  const handleGenerateContract = async () => {
+    try {
+      setContractGenerating(true)
+      console.log("📄 Gerando contrato para usuário existente...")
+
+      const response = await fetch("/api/create-contract-document/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userData: {
+            name: `${userProfile.first_name} ${userProfile.last_name}`,
+            email: userProfile.email,
+            cpf: userProfile.cpf,
+            rg: userProfile.rg,
+            phone: userProfile.whatsapp,
+          },
+          amount: Number.parseFloat(userProfile.deposit_value),
+        }),
+      })
+
+      console.log("📊 Status da resposta de geração de contrato:", response.status)
+
+      const result = await response.json()
+      console.log("📦 Resultado da geração de contrato:", result)
+
+      if (result.success) {
+        console.log("✅ Contrato gerado com sucesso!")
+        setContractGenerated(true)
+
+        if (result.contract && result.contract.downloadUrl) {
+          setContractDownloadUrl(result.contract.downloadUrl)
+        }
+
+        // Atualizar o perfil do usuário para refletir que o contrato foi gerado
+        setUserProfile((prev) => ({
+          ...prev,
+          contract_generated_successfully: true,
+        }))
+
+        alert("Contrato gerado com sucesso! Você pode baixá-lo agora.")
+      } else {
+        console.error("❌ Erro ao gerar contrato:", result)
+        alert("Erro ao gerar contrato: " + (result.error || "Erro desconhecido"))
+      }
+    } catch (error) {
+      console.error("💥 Erro na geração de contrato:", error)
+      alert("Erro de conexão ao gerar contrato. Tente novamente.")
+    } finally {
+      setContractGenerating(false)
     }
   }
 
@@ -361,16 +418,25 @@ export default function InvestorDashboard() {
                   <div className="pt-4 border-t">
                     <div className="flex items-center justify-between">
                       <span className="text-gray-500">Status do Contrato:</span>
-                      <Badge variant={userProfile.contract_generated_successfully ? "default" : "secondary"}>
-                        {userProfile.contract_generated_successfully ? (
+                      <Badge
+                        variant={
+                          userProfile.contract_generated_successfully || contractGenerated ? "default" : "secondary"
+                        }
+                      >
+                        {userProfile.contract_generated_successfully || contractGenerated ? (
                           <>
                             <CheckCircle className="mr-1 h-3 w-3" />
                             Gerado
                           </>
+                        ) : hasInvestment ? (
+                          <>
+                            <Clock className="mr-1 h-3 w-3" />
+                            Pronto para gerar
+                          </>
                         ) : (
                           <>
                             <Clock className="mr-1 h-3 w-3" />
-                            Pendente
+                            Aguardando investimento
                           </>
                         )}
                       </Badge>
@@ -388,6 +454,45 @@ export default function InvestorDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Botão de Gerar Contrato - só aparece se tem investimento mas não tem contrato */}
+                  {hasInvestment && !userProfile.contract_generated_successfully && (
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      onClick={handleGenerateContract}
+                      disabled={contractGenerating}
+                    >
+                      {contractGenerating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Gerando contrato...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Gerar Contrato de Investimento
+                        </>
+                      )}
+                    </Button>
+                  )}
+
+                  {/* Botão de Download - só aparece se o contrato foi gerado */}
+                  {(userProfile.contract_generated_successfully || contractGenerated) && contractDownloadUrl && (
+                    <Button
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => window.open(contractDownloadUrl, "_blank")}
+                    >
+                      <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      Baixar Contrato (DOCX)
+                    </Button>
+                  )}
+
                   <Button
                     className="w-full"
                     variant="outline"
@@ -400,7 +505,15 @@ export default function InvestorDashboard() {
                   <div className="pt-4 border-t">
                     <h4 className="font-medium mb-2">Próximos Passos:</h4>
                     <ul className="text-sm text-gray-600 space-y-1">
-                      {!userProfile.contract_generated_successfully && <li>• Aguarde a geração do contrato</li>}
+                      {!userProfile.contract_generated_successfully && !contractGenerated && hasInvestment && (
+                        <li>• Gere seu contrato de investimento</li>
+                      )}
+                      {!userProfile.contract_generated_successfully && !contractGenerated && !hasInvestment && (
+                        <li>• Aguarde a confirmação do pagamento</li>
+                      )}
+                      {(userProfile.contract_generated_successfully || contractGenerated) && (
+                        <li>• ✅ Contrato gerado e disponível para download</li>
+                      )}
                       <li>• Aguarde o início do período de vesting</li>
                       <li>• Participe das atividades da comunidade</li>
                       <li>• Acompanhe atualizações do projeto</li>

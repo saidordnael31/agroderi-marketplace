@@ -940,10 +940,11 @@ export default function AgroDeriLanding() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
-                  className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg"
+                  className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-4 sm:px-8 py-3 sm:py-4 text-base sm:text-lg"
                   onClick={scrollToCheckout}
                 >
-                  Quero meus tokens AGD agora
+                  <span className="hidden sm:inline">Quero meus tokens AGD agora</span>
+                  <span className="sm:hidden">Quero tokens AGD</span>
                 </Button>
                 <Button
                   size="lg"
@@ -1114,11 +1115,12 @@ export default function AgroDeriLanding() {
             </p>
             <Button
               size="lg"
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-8 py-4 text-base sm:text-lg w-full sm:w-auto"
               onClick={scrollToCheckout}
             >
-              Quero garantir meus primeiros tokens
-              <ArrowDown className="ml-2 h-5 w-5" />
+              <span className="hidden sm:inline">Quero garantir meus primeiros tokens</span>
+              <span className="sm:hidden">Quero meus tokens AGD</span>
+              <ArrowDown className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
         </div>

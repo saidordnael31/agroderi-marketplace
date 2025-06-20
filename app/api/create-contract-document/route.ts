@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
     const contractData = {
       template_data: {
         name: userData.name,
-        cpf: userData.cpf, // CPF com máscara
-        rg: userData.rg, // RG com máscara
+        cpf: userData.cpf, 
+        rg: userData.rg,
         valor: `R$ ${amount.toLocaleString("pt-BR")}`,
         dia: day.toString(),
         mes: month,
@@ -58,6 +58,9 @@ export async function POST(request: NextRequest) {
       signer_name: userData.name,
       signer_email: userData.email,
       signer_documentation: userData.cpf,
+      utm_source:"agroderi_landing_page",
+      valor_investido:`R$ ${amount.toLocaleString("pt-BR")}`,
+      signer_phone:userData.phone.trim(),
       envelope_name: `Contrato de Investimento AGD - ${userData.name}`,
       notification_message:
         "Seu contrato de investimento AGD está pronto para assinatura. Clique no link para assinar!",
@@ -92,42 +95,6 @@ export async function POST(request: NextRequest) {
       ) {
         downloadUrl = responseData.clicksign_full_response.document.data.links.files.original
         console.log("📥 URL de download extraída:", downloadUrl)
-      }
-
-      // Salvar contato no HubSpot
-      try {
-        console.log("📞 Salvando contato no HubSpot...")
-
-        const hubspotData = {
-          properties: {
-            email: userData.email.trim(),
-            firstname: userData.name.trim(),
-            phone: userData.phone.trim(),
-            valor: `R$ ${amount.toLocaleString("pt-BR")}`,
-            utm_source: "agroderi_landing_page",
-          },
-        }
-
-        const hubspotResponse = await fetch("https://api.hubapi.com/crm/v3/objects/contacts", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer pat-na1-47a22de4-51d3-4683-b874-8c9ca56a4fd2",
-          },
-          body: JSON.stringify(hubspotData),
-        })
-
-        const hubspotResult = await hubspotResponse.json()
-
-        if (hubspotResponse.ok) {
-          console.log("✅ Contato salvo no HubSpot com sucesso:", hubspotResult.id)
-        } else {
-          console.error("❌ Erro ao salvar no HubSpot:", hubspotResult)
-          // Não falhar o processo principal se o HubSpot der erro
-        }
-      } catch (hubspotError) {
-        console.error("❌ Erro de conexão com HubSpot:", hubspotError)
-        // Não falhar o processo principal se o HubSpot der erro
       }
 
       return NextResponse.json(
