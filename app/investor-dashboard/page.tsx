@@ -11,9 +11,7 @@ import {
   DollarSign,
   Calendar,
   FileText,
-  TrendingUp,
   Shield,
-  Download,
   RefreshCw,
   LogOut,
   Loader2,
@@ -225,8 +223,6 @@ export default function InvestorDashboard() {
                 </CardContent>
               </Card>
 
-            
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Pacote</CardTitle>
@@ -252,7 +248,9 @@ export default function InvestorDashboard() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {userProfile.contract_generated_successfully ? "Contrato gerado e enviado por e-mail" : "Aguardando contrato"}
+                    {userProfile.contract_generated_successfully
+                      ? "Contrato gerado e enviado por e-mail"
+                      : "Aguardando contrato"}
                   </p>
                 </CardContent>
               </Card>
@@ -350,13 +348,10 @@ export default function InvestorDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                 
-
-                  <Button className="w-full" variant="outline"> 
+                  <Button className="w-full" variant="outline">
                     Pedir resgate e cancelar investimento
                   </Button>
 
-                
                   <div className="pt-4 border-t">
                     <h4 className="font-medium mb-2">Próximos Passos:</h4>
                     <ul className="text-sm text-gray-600 space-y-1">
@@ -470,7 +465,36 @@ export default function InvestorDashboard() {
               </p>
               <Button
                 onClick={() => {
+                  // Redirecionar para a página principal com dados pré-preenchidos
+                  const params = new URLSearchParams({
+                    prefill: "true",
+                    name: `${userProfile.first_name} ${userProfile.last_name}`,
+                    email: userProfile.email,
+                    cpf: userProfile.cpf,
+                    phone: userProfile.whatsapp || "",
+                    rg: userProfile.rg || "",
+                    user_id: userProfile.id.toString(),
+                  })
+
+                  window.opener?.postMessage(
+                    {
+                      type: "PREFILL_INVESTMENT_DATA",
+                      data: {
+                        name: `${userProfile.first_name} ${userProfile.last_name}`,
+                        email: userProfile.email,
+                        cpf: userProfile.cpf,
+                        phone: userProfile.whatsapp || "",
+                        rg: userProfile.rg || "",
+                        user_id: userProfile.id,
+                      },
+                    },
+                    "*",
+                  )
+
+                  // Focar na janela principal
                   window.opener?.focus()
+
+                  // Fechar esta janela
                   window.close()
                 }}
               >

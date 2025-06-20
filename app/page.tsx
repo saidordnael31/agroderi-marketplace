@@ -200,6 +200,46 @@ export default function AgroDeriLanding() {
     general: "",
   })
 
+  // Adicionar após os useEffects existentes
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data.type === "PREFILL_INVESTMENT_DATA") {
+        const data = event.data.data
+        console.log("📝 Pré-preenchendo dados do usuário logado:", data)
+
+        // Pré-preencher os dados do usuário
+        setUserData({
+          name: data.name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          cpf: data.cpf || "",
+          rg: data.rg || "",
+          birthday: "", // Não temos este dado, usuário precisa preencher
+          password: "", // Não precisamos da senha pois já está cadastrado
+          confirmPassword: "", // Não precisamos da senha pois já está cadastrado
+        })
+
+        // Mostrar o checkout e ir direto para seleção de pacote
+        setShowCheckout(true)
+        setCurrentStep(0)
+
+        // Scroll para o checkout
+        setTimeout(() => {
+          checkoutRef.current?.scrollIntoView({ behavior: "smooth" })
+        }, 100)
+
+        // Mostrar mensagem de boas-vindas
+        alert(`Bem-vindo de volta, ${data.name}! Seus dados foram pré-preenchidos. Escolha seu pacote de investimento.`)
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [])
+
   // Modificar a função createContractDocument para usar a nova API
   const createContractDocument = async () => {
     try {
@@ -566,16 +606,21 @@ export default function AgroDeriLanding() {
       errors.email = "E-mail inválido"
     }
 
-    if (!userData.password.trim()) {
-      errors.password = "Senha é obrigatória"
-    } else if (!validatePassword(userData.password)) {
-      errors.password = "Senha deve ter pelo menos 8 caracteres, 1 maiúscula, 1 minúscula e 1 número"
-    }
+    // Só validar senha se não for usuário pré-cadastrado
+    const isPrefilledUser = !userData.password && !userData.confirmPassword
 
-    if (!userData.confirmPassword.trim()) {
-      errors.confirmPassword = "Confirmação de senha é obrigatória"
-    } else if (userData.password !== userData.confirmPassword) {
-      errors.confirmPassword = "Senhas não coincidem"
+    if (!isPrefilledUser) {
+      if (!userData.password.trim()) {
+        errors.password = "Senha é obrigatória"
+      } else if (!validatePassword(userData.password)) {
+        errors.password = "Senha deve ter pelo menos 8 caracteres, 1 maiúscula, 1 minúscula e 1 número"
+      }
+
+      if (!userData.confirmPassword.trim()) {
+        errors.confirmPassword = "Confirmação de senha é obrigatória"
+      } else if (userData.password !== userData.confirmPassword) {
+        errors.confirmPassword = "Senhas não coincidem"
+      }
     }
 
     if (!userData.phone.trim()) {
@@ -614,6 +659,13 @@ export default function AgroDeriLanding() {
     try {
       setLoading(true)
 
+      // Se os campos de senha estão vazios, significa que é um usuário já cadastrado
+      if (!userData.password && !userData.confirmPassword) {
+        console.log("✅ Usuário já cadastrado, pulando registro")
+        setCurrentStep(2)
+        return
+      }
+
       const nameParts = userData.name.trim().split(" ")
       const firstName = nameParts[0]
       const lastName = nameParts.slice(1).join(" ") || firstName
@@ -651,8 +703,7 @@ export default function AgroDeriLanding() {
           setCurrentStep(2)
         } else {
           console.error("❌ Erro no registro:", result)
-           handleRegistrationErrors(result)
-          //setCurrentStep(2)
+          handleRegistrationErrors(result)
         }
       } catch (error) {
         console.error("🌐 Erro de rede:", error)
@@ -1236,63 +1287,80 @@ export default function AgroDeriLanding() {
                     <p className="text-xs text-gray-500 mt-1">Formato: DD/MM/AAAA</p>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="password">Senha *</Label>
-                      <div className="relative">
-                        <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Sua senha"
-                          value={userData.password}
-                          onChange={(e) => handleInputChange("password", e.target.value)}
-                          className={`pr-10 ${formErrors.password ? "border-red-500" : ""}`}
-                        />
-                        <button
-                          type="button"
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                          )}
-                        </button>
+                  {/* Só mostrar campos de senha se não for usuário pré-cadastrado */}
+                  {!userData.password && !userData.confirmPassword ? (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-white text-xs">ℹ️</span>
+                        </div>
+                        <div className="text-sm">
+                          <p className="font-medium text-blue-800 mb-1">Usuário já cadastrado</p>
+                          <p className="text-blue-700">
+                            Seus dados foram pré-preenchidos. Verifique as informações e prossiga com seu investimento.
+                          </p>
+                        </div>
                       </div>
-                      {formErrors.password && <p className="text-red-500 text-sm mt-1">{formErrors.password}</p>}
-                      <p className="text-xs text-gray-500 mt-1">
-                        Mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número
-                      </p>
                     </div>
-                    <div>
-                      <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
-                      <div className="relative">
-                        <Input
-                          id="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
-                          placeholder="Confirme sua senha"
-                          value={userData.confirmPassword}
-                          onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                          className={`pr-10 ${formErrors.confirmPassword ? "border-red-500" : ""}`}
-                        />
-                        <button
-                          type="button"
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                          )}
-                        </button>
+                  ) : (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="password">Senha *</Label>
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Sua senha"
+                            value={userData.password}
+                            onChange={(e) => handleInputChange("password", e.target.value)}
+                            className={`pr-10 ${formErrors.password ? "border-red-500" : ""}`}
+                          />
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            )}
+                          </button>
+                        </div>
+                        {formErrors.password && <p className="text-red-500 text-sm mt-1">{formErrors.password}</p>}
+                        <p className="text-xs text-gray-500 mt-1">
+                          Mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número
+                        </p>
                       </div>
-                      {formErrors.confirmPassword && (
-                        <p className="text-red-500 text-sm mt-1">{formErrors.confirmPassword}</p>
-                      )}
+                      <div>
+                        <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                        <div className="relative">
+                          <Input
+                            id="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="Confirme sua senha"
+                            value={userData.confirmPassword}
+                            onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                            className={`pr-10 ${formErrors.confirmPassword ? "border-red-500" : ""}`}
+                          />
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                            )}
+                          </button>
+                        </div>
+                        {formErrors.confirmPassword && (
+                          <p className="text-red-500 text-sm mt-1">{formErrors.confirmPassword}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div>
                     <Label htmlFor="amount">Valor do Investimento *</Label>
@@ -1714,7 +1782,6 @@ export default function AgroDeriLanding() {
                       Seu contrato está disponível para download no formato DOCX. Após baixar, você pode revisar os
                       termos e aguardar as próximas instruções para assinatura digital. Bem-vindo à revolução do agro
                       tokenizado!
-                 
                     </p>
                   </div>
                 </CardContent>
