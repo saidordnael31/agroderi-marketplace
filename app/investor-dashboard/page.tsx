@@ -25,6 +25,9 @@ export default function InvestorDashboard() {
   const [loading, setLoading] = useState(true)
   const [userProfile, setUserProfile] = useState(null)
   const [error, setError] = useState("")
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false)
+  const [withdrawLoading, setWithdrawLoading] = useState(false)
+  const [withdrawSuccess, setWithdrawSuccess] = useState(false)
 
   const userEmail = searchParams.get("user")
   const token = searchParams.get("token")
@@ -80,6 +83,45 @@ export default function InvestorDashboard() {
       setError("Erro de conexão ao carregar dados do investimento")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleWithdrawRequest = async () => {
+    try {
+      setWithdrawLoading(true)
+      console.log("💰 Solicitando resgate do investimento...")
+
+      const response = await fetch("https://api.agroderivative.tech/api/new-fiat-withdraw/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
+        },
+        body: JSON.stringify({
+          cpf: userProfile.cpf,
+          value: Number.parseFloat(userProfile.deposit_value),
+          pixKey: userProfile.cpf,
+        }),
+      })
+
+      console.log("📊 Status da resposta de resgate:", response.status)
+
+      const result = await response.json()
+      console.log("📦 Resultado do resgate:", result)
+
+      if (response.ok) {
+        console.log("✅ Resgate solicitado com sucesso!")
+        setWithdrawSuccess(true)
+      } else {
+        console.error("❌ Erro ao solicitar resgate:", result)
+        alert("Erro ao solicitar resgate: " + (result.error || result.message || "Erro desconhecido"))
+      }
+    } catch (error) {
+      console.error("💥 Erro na solicitação de resgate:", error)
+      alert("Erro de conexão ao solicitar resgate. Tente novamente.")
+    } finally {
+      setWithdrawLoading(false)
     }
   }
 
@@ -348,7 +390,12 @@ export default function InvestorDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button className="w-full" variant="outline">
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => setShowWithdrawModal(true)}
+                    disabled={!hasInvestment}
+                  >
                     Pedir resgate e cancelar investimento
                   </Button>
 
@@ -504,6 +551,112 @@ export default function InvestorDashboard() {
           </Card>
         )}
       </div>
+      {/* Modal de Confirmação de Resgate */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-xl text-center text-red-600">⚠️ Confirmar Resgate</CardTitle>
+              <CardDescription className="text-center">
+                Tem certeza que deseja cancelar seu investimento e solicitar o resgate?
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {withdrawSuccess ? (
+                <div className="text-center space-y-4">
+                  <div className="text-6xl">✅</div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-green-600 mb-2">Resgate Solicitado com Sucesso!</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Seu reembolso será processado e o pagamento será enviado para a chave PIX registrada no seu CPF.
+                    </p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        <strong>Valor:</strong> R${" "}
+                        {Number.parseFloat(userProfile?.deposit_value || "0").toLocaleString("pt-BR")}
+                      </p>
+                      <p className="text-sm text-blue-800">
+                        <strong>Chave PIX:</strong> {userProfile?.cpf}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setShowWithdrawModal(false)
+                      setWithdrawSuccess(false)
+                      // Atualizar dados do usuário
+                      fetchUserProfile()
+                    }}
+                    className="w-full"
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">⚠️</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-yellow-800 mb-1">Atenção!</p>
+                        <p className="text-yellow-700">
+                          Esta ação irá cancelar permanentemente seu investimento em tokens AGD. O valor será devolvido
+                          via PIX para a chave registrada no seu CPF.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {userProfile && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-medium mb-2">Detalhes do Resgate:</h4>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>Valor a ser devolvido:</span>
+                          <span className="font-medium">
+                            R$ {Number.parseFloat(userProfile.deposit_value || "0").toLocaleString("pt-BR")}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Chave PIX:</span>
+                          <span className="font-medium">{userProfile.cpf}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-4 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowWithdrawModal(false)}
+                      className="flex-1"
+                      disabled={withdrawLoading}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleWithdrawRequest}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                      disabled={withdrawLoading}
+                    >
+                      {withdrawLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processando...
+                        </>
+                      ) : (
+                        "Confirmar Resgate"
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

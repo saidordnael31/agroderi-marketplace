@@ -1557,7 +1557,7 @@ export default function AgroDeriLanding() {
                     {paymentConfirmed ? (
                       <Button className="flex-1 bg-green-600 text-white" disabled>
                         <CheckCircle className="mr-2 h-4 w-4" />
-                        Pagamento Confirmado
+                        Pagamento Confirmado, gerar o contrato
                       </Button>
                     ) : (
                       <Button
@@ -1669,7 +1669,7 @@ export default function AgroDeriLanding() {
                     {paymentConfirmed ? (
                       <Button className="flex-1 bg-green-600 text-white" disabled>
                         <CheckCircle className="mr-2 h-4 w-4" />
-                        Pagamento Confirmado
+                        Pagamento Confirmado, gerar o contrato
                       </Button>
                     ) : (
                       <Button
