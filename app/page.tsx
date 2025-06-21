@@ -1130,7 +1130,7 @@ export default function AgroDeriLanding() {
 
           {/* Logos dos Parceiros */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 mb-16 opacity-60">
-            {["Google for Startups", "Nubank", "Transfero", "SGS", "Blockchain"].map((partner) => (
+            {["Google for Startups", "Nubank", "GEM NY", "BID Invest", "Cubo Itaú"].map((partner) => (
               <div key={partner} className="bg-gray-100 rounded-lg p-6 flex items-center justify-center">
                 <span className="text-gray-600 font-semibold text-sm">{partner}</span>
               </div>
@@ -1228,7 +1228,7 @@ export default function AgroDeriLanding() {
               {
                 step: "4️⃣",
                 icon: <BarChart3 className="h-8 w-8" />,
-                title: "Receba lucros",
+                title: "Receba seus resultados",
                 description: "Bônus e benefícios",
               },
             ].map((item, index) => (
