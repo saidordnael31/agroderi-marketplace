@@ -749,7 +749,7 @@ export default function AgroDeriLanding() {
       errors.birthday = "Data de nascimento inválida"
     }
 
-    if (!amount || amount < 1) {
+    if (!amount || amount < 50) {
       errors.amount = "Valor mínimo de investimento é R$ 50"
     }
 
