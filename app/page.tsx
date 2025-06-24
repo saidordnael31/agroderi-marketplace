@@ -27,7 +27,7 @@ import {
   EyeOff,
   ArrowLeft,
 } from "lucide-react"
-import { maskCPF, maskRG, maskPhone, maskDate, validateDate, unmaskValue } from "@/utils/input-masks"
+import { maskCPF, maskRG, maskPhone, unmaskValue } from "@/utils/input-masks"
 import { AVAILABLE_CRYPTOS } from "@/utils/crypto-list"
 
 export default function AgroDeriLanding() {
@@ -41,7 +41,6 @@ export default function AgroDeriLanding() {
     phone: "",
     cpf: "",
     rg: "",
-    birthday: "",
     password: "",
     confirmPassword: "",
   })
@@ -63,7 +62,6 @@ export default function AgroDeriLanding() {
     phone: "",
     cpf: "",
     rg: "",
-    birthday: "",
     amount: "",
     password: "",
     confirmPassword: "",
@@ -222,7 +220,6 @@ export default function AgroDeriLanding() {
           phone: data.phone || "",
           cpf: data.cpf || "",
           rg: data.rg || "",
-          birthday: "", // Não temos este dado, usuário precisa preencher
           password: "", // Não precisamos da senha pois já está cadastrado
           confirmPassword: "", // Não precisamos da senha pois já está cadastrado
         })
@@ -692,7 +689,6 @@ export default function AgroDeriLanding() {
       phone: "",
       cpf: "",
       rg: "",
-      birthday: "",
       amount: "",
       password: "",
       confirmPassword: "",
@@ -743,12 +739,6 @@ export default function AgroDeriLanding() {
       errors.rg = "RG deve ter pelo menos 7 caracteres"
     }
 
-    if (!userData.birthday.trim()) {
-      errors.birthday = "Data de nascimento é obrigatória"
-    } else if (!validateDate(userData.birthday)) {
-      errors.birthday = "Data de nascimento inválida"
-    }
-
     if (!amount || amount < 50) {
       errors.amount = "Valor mínimo de investimento é R$ 50"
     }
@@ -782,7 +772,6 @@ export default function AgroDeriLanding() {
         cpf: unmaskValue(userData.cpf),
         whatsapp: unmaskValue(userData.phone),
         rg: unmaskValue(userData.rg),
-        birthday: userData.birthday,
       }
 
       //    console.log("📝 Dados de registro:", registrationData)
@@ -826,7 +815,6 @@ export default function AgroDeriLanding() {
       phone: "",
       cpf: "",
       rg: "",
-      birthday: "",
       amount: "",
       password: "",
       confirmPassword: "",
@@ -860,10 +848,6 @@ export default function AgroDeriLanding() {
       backendErrors.name = Array.isArray(data.last_name) ? data.last_name[0] : data.last_name
     }
 
-    if (data.birthday) {
-      backendErrors.birthday = Array.isArray(data.birthday) ? data.birthday[0] : data.birthday
-    }
-
     if (data.non_field_errors) {
       alert(Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors)
     }
@@ -895,7 +879,6 @@ export default function AgroDeriLanding() {
       phone: "",
       cpf: "",
       rg: "",
-      birthday: "",
       password: "",
       confirmPassword: "",
     })
@@ -914,7 +897,6 @@ export default function AgroDeriLanding() {
       phone: "",
       cpf: "",
       rg: "",
-      birthday: "",
       amount: "",
       password: "",
       confirmPassword: "",
@@ -960,9 +942,6 @@ export default function AgroDeriLanding() {
         break
       case "confirmPassword":
         setUserData({ ...userData, confirmPassword: value })
-        break
-      case "birthday":
-        setUserData({ ...userData, birthday: maskDate(value) })
         break
       default:
         setUserData({ ...userData, [field]: value })
@@ -1415,20 +1394,6 @@ export default function AgroDeriLanding() {
                       className={formErrors.email ? "border-red-500" : ""}
                     />
                     {formErrors.email && <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="birthday">Data de Nascimento *</Label>
-                    <Input
-                      id="birthday"
-                      placeholder="DD/MM/AAAA"
-                      value={userData.birthday}
-                      onChange={(e) => handleInputChange("birthday", e.target.value)}
-                      className={formErrors.birthday ? "border-red-500" : ""}
-                      maxLength={10}
-                    />
-                    {formErrors.birthday && <p className="text-red-500 text-sm mt-1">{formErrors.birthday}</p>}
-                    <p className="text-xs text-gray-500 mt-1">Formato: DD/MM/AAAA</p>
                   </div>
 
                   {/* Só mostrar campos de senha se não for usuário pré-cadastrado */}
