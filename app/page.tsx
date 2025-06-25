@@ -346,7 +346,7 @@ export default function AgroDeriLanding() {
   const handlePaymentConfirmation = async () => {
     try {
       setCheckingPayment(true)
-      //  console.log("🔍 Verificando status do pagamento manualmente...")
+      console.log("🔍 Verificando status do pagamento manualmente...")
 
       const response = await fetch("/api/check-payment-status/", {
         method: "POST",
@@ -358,13 +358,11 @@ export default function AgroDeriLanding() {
         }),
       })
 
-      //console.log("📊 Status da resposta:", response.status)
-
       const result = await response.json()
-      // console.log("📦 Resultado completo:", result)
+      console.log("📦 Resultado completo:", result)
 
       if (result.success && result.confirmed) {
-        //  console.log("✅ Pagamento confirmado!")
+        console.log("✅ Pagamento confirmado!")
         setPaymentConfirmed(true)
 
         // Criar documento de contrato
@@ -374,12 +372,74 @@ export default function AgroDeriLanding() {
           // Avançar para tela de confirmação
           setCurrentStep(3)
         }
+      } else if (result.success && result.data) {
+        // Verificar se é pagamento crypto
+        if (paymentMethod === "crypto") {
+          const depositCryptoValue = result.data.deposit_crypto_value
+          const depositCryptoName = result.data.deposit_crypto_name
+
+          console.log("🪙 Verificando pagamento crypto:")
+          console.log("- deposit_crypto_value:", depositCryptoValue)
+          console.log("- deposit_crypto_name:", depositCryptoName)
+
+          // Verificar se ambos os campos têm valores válidos
+          if (
+            depositCryptoValue &&
+            depositCryptoName &&
+            depositCryptoValue !== "0.0" &&
+            depositCryptoValue !== null &&
+            depositCryptoName !== "0.0" &&
+            depositCryptoName !== null &&
+            Number.parseFloat(depositCryptoValue) > 0
+          ) {
+            console.log("✅ Pagamento crypto confirmado!")
+            console.log(`💰 Valor: ${depositCryptoValue} ${depositCryptoName}`)
+
+            setPaymentConfirmed(true)
+
+            // Criar documento de contrato
+            const contractSuccess = await createContractDocument()
+
+            if (contractSuccess) {
+              // Avançar para tela de confirmação
+              setCurrentStep(3)
+            }
+          } else {
+            console.log("⏳ Pagamento crypto ainda não confirmado")
+            alert(
+              "Pagamento crypto ainda não foi identificado. Aguarde alguns minutos após a confirmação na blockchain e tente novamente.",
+            )
+          }
+        } else {
+          // Verificar pagamento PIX (lógica original)
+          const depositValue = result.data.deposit_value
+
+          if (depositValue && Number.parseFloat(depositValue) > 0) {
+            console.log("✅ Pagamento PIX confirmado!")
+            setPaymentConfirmed(true)
+
+            // Criar documento de contrato
+            const contractSuccess = await createContractDocument()
+
+            if (contractSuccess) {
+              // Avançar para tela de confirmação
+              setCurrentStep(3)
+            }
+          } else {
+            console.log("⏳ Pagamento PIX ainda não confirmado")
+            alert("Pagamento PIX ainda não foi identificado. Aguarde alguns minutos e tente novamente.")
+          }
+        }
       } else {
-        ///  console.log("❌ Pagamento não confirmado ainda")
-        alert("Pagamento ainda não foi identificado. Aguarde alguns minutos e tente novamente.")
+        console.log("❌ Pagamento não confirmado ainda")
+        const message =
+          paymentMethod === "crypto"
+            ? "Pagamento crypto ainda não foi identificado. Aguarde alguns minutos após a confirmação na blockchain e tente novamente."
+            : "Pagamento PIX ainda não foi identificado. Aguarde alguns minutos e tente novamente."
+        alert(message)
       }
     } catch (error) {
-      //   console.error("❌ Erro ao verificar status do pagamento:", error)
+      console.error("❌ Erro ao verificar status do pagamento:", error)
       alert("Erro ao verificar pagamento. Tente novamente.")
     } finally {
       setCheckingPayment(false)
