@@ -17,6 +17,7 @@ import {
   Loader2,
   CheckCircle,
   Clock,
+  Coins,
 } from "lucide-react"
 import { maskCPF, maskPhone, maskRG } from "@/utils/input-masks"
 
@@ -47,7 +48,7 @@ export default function InvestorDashboard() {
     try {
       setLoading(true)
       setError("")
-   //   console.log("📊 Buscando perfil do usuário com CPF:", cpf)
+      console.log("📊 Buscando perfil do usuário com CPF:", cpf)
 
       // Usar nossa API route ao invés da requisição direta
       const response = await fetch(`/api/get-user-profile?cpf=${cpf}`, {
@@ -57,28 +58,66 @@ export default function InvestorDashboard() {
         },
       })
 
-   //   console.log("📊 Status da resposta:", response.status)
+      console.log("📊 Status da resposta:", response.status)
 
       if (response.ok) {
         const profileData = await response.json()
-     //   console.log("📦 Dados do perfil:", profileData)
+        console.log("📦 Dados do perfil:", profileData)
+
+        // Determinar tipo de depósito e valor
+        const depositValue = Number.parseFloat(profileData.deposit_value || "0")
+        const depositCryptoValue = Number.parseFloat(profileData.deposit_crypto_value || "0")
+        const depositCryptoName = profileData.deposit_crypto_name
+
+        console.log("💰 Depósito PIX:", depositValue)
+        console.log("🪙 Depósito Crypto:", depositCryptoValue, depositCryptoName)
+
+        // Determinar qual tipo de depósito foi feito
+        let paymentType = "none"
+        let totalDepositValue = 0
+        let paymentDetails = {}
+
+        if (depositValue > 0) {
+          paymentType = "pix"
+          totalDepositValue = depositValue
+          paymentDetails = {
+            method: "PIX",
+            value: depositValue,
+            currency: "BRL",
+          }
+        } else if (depositCryptoValue > 0 && depositCryptoName) {
+          paymentType = "crypto"
+          totalDepositValue = depositCryptoValue
+          paymentDetails = {
+            method: "Criptomoeda",
+            value: depositCryptoValue,
+            currency: depositCryptoName,
+            cryptoName: depositCryptoName,
+          }
+        }
+
+        console.log("💳 Tipo de pagamento detectado:", paymentType)
+        console.log("💰 Valor total do depósito:", totalDepositValue)
 
         // Calcular informações adicionais baseadas nos dados
-        const depositValue = Number.parseFloat(profileData.deposit_value || "0")
-        const packageInfo = getPackageInfo(depositValue)
+        const packageInfo = getPackageInfo(totalDepositValue)
 
         setUserProfile({
           ...profileData,
           investment_date: new Date().toISOString(), // Por enquanto usar data atual
           package_type: packageInfo.name,
-          tokens_amount: calculateTokens(depositValue, packageInfo.bonus),
+          tokens_amount: calculateTokens(totalDepositValue, packageInfo.bonus),
           vesting_period: packageInfo.vesting,
           cliff_period: packageInfo.cliff,
           bonus_percentage: packageInfo.bonus,
+          // Adicionar informações de pagamento
+          payment_type: paymentType,
+          total_deposit_value: totalDepositValue,
+          payment_details: paymentDetails,
         })
       } else {
         const errorData = await response.json()
-    //    console.error("❌ Erro na API:", errorData)
+        console.error("❌ Erro na API:", errorData)
         setError(errorData.error || "Não foi possível carregar os dados do investimento")
       }
     } catch (error) {
@@ -92,7 +131,7 @@ export default function InvestorDashboard() {
   const handleWithdrawRequest = async () => {
     try {
       setWithdrawLoading(true)
-   //   console.log("💰 Solicitando resgate do investimento...")
+      console.log("💰 Solicitando resgate do investimento...")
 
       const response = await fetch("/api/request-withdraw/", {
         method: "POST",
@@ -101,15 +140,15 @@ export default function InvestorDashboard() {
         },
         body: JSON.stringify({
           cpf: userProfile.cpf,
-          value: userProfile.deposit_value,
+          value: userProfile.total_deposit_value, // Usar valor total independente do tipo
           pixKey: userProfile.cpf,
         }),
       })
 
-   //   console.log("📊 Status da resposta de resgate:", response.status)
+      console.log("📊 Status da resposta de resgate:", response.status)
 
       const result = await response.json()
-   //   console.log("📦 Resultado do resgate:", result)
+      console.log("📦 Resultado do resgate:", result)
 
       if (result.success) {
         console.log("✅ Resgate solicitado com sucesso!")
@@ -129,7 +168,7 @@ export default function InvestorDashboard() {
   const handleGenerateContract = async () => {
     try {
       setContractGenerating(true)
-    //  console.log("📄 Gerando contrato para usuário existente...")
+      console.log("📄 Gerando contrato para usuário existente...")
 
       const response = await fetch("/api/create-contract-document/", {
         method: "POST",
@@ -140,21 +179,21 @@ export default function InvestorDashboard() {
           userData: {
             name: `${userProfile.first_name} ${userProfile.last_name}`,
             email: userProfile.email,
-            cpf:maskCPF(userProfile.cpf),
+            cpf: maskCPF(userProfile.cpf),
             rg: userProfile.rg,
             phone: userProfile.whatsapp,
           },
-          amount: Number.parseFloat(userProfile.deposit_value),
+          amount: userProfile.total_deposit_value, // Usar valor total
         }),
       })
 
-    //  console.log("📊 Status da resposta de geração de contrato:", response.status)
+      console.log("📊 Status da resposta de geração de contrato:", response.status)
 
       const result = await response.json()
-   //   console.log("📦 Resultado da geração de contrato:", result)
+      console.log("📦 Resultado da geração de contrato:", result)
 
       if (result.success) {
-   //     console.log("✅ Contrato gerado com sucesso!")
+        console.log("✅ Contrato gerado com sucesso!")
         setContractGenerated(true)
 
         if (result.contract && result.contract.downloadUrl) {
@@ -173,7 +212,7 @@ export default function InvestorDashboard() {
         alert("Erro ao gerar contrato: " + (result.error || "Erro desconhecido"))
       }
     } catch (error) {
-   //   console.error("💥 Erro na geração de contrato:", error)
+      console.error("💥 Erro na geração de contrato:", error)
       alert("Erro de conexão ao gerar contrato. Tente novamente.")
     } finally {
       setContractGenerating(false)
@@ -264,8 +303,7 @@ export default function InvestorDashboard() {
     )
   }
 
-  const depositValue = Number.parseFloat(userProfile.deposit_value || "0")
-  const hasInvestment = depositValue > 0
+  const hasInvestment = userProfile.total_deposit_value > 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -310,13 +348,38 @@ export default function InvestorDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Valor Investido</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  {userProfile.payment_type === "crypto" ? (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">R$ {depositValue.toLocaleString("pt-BR")}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {userProfile.contract_generated_successfully ? "Investimento confirmado" : "Aguardando confirmação"}
-                  </p>
+                  <div className="text-2xl font-bold">
+                    {userProfile.payment_type === "crypto" ? (
+                      <>
+                        {userProfile.total_deposit_value.toLocaleString()} {userProfile.payment_details.currency}
+                        <div className="text-sm text-gray-500 font-normal">
+                          ≈ R$ {userProfile.total_deposit_value.toLocaleString("pt-BR")}
+                        </div>
+                      </>
+                    ) : (
+                      `R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")}`
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge
+                      variant={userProfile.payment_type === "crypto" ? "default" : "secondary"}
+                      className="text-xs"
+                    >
+                      {userProfile.payment_details.method}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground">
+                      {userProfile.contract_generated_successfully
+                        ? "Investimento confirmado"
+                        : "Aguardando confirmação"}
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -348,6 +411,29 @@ export default function InvestorDashboard() {
                     {userProfile.contract_generated_successfully
                       ? "Contrato gerado e enviado por e-mail"
                       : "Aguardando contrato"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Método de Pagamento</CardTitle>
+                  {userProfile.payment_type === "crypto" ? (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold">{userProfile.payment_details.method}</div>
+                  {userProfile.payment_type === "crypto" && (
+                    <p className="text-xs text-muted-foreground">{userProfile.payment_details.cryptoName}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Valor:{" "}
+                    {userProfile.payment_type === "crypto"
+                      ? `${userProfile.total_deposit_value} ${userProfile.payment_details.currency}`
+                      : `R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")}`}
                   </p>
                 </CardContent>
               </Card>
@@ -393,6 +479,41 @@ export default function InvestorDashboard() {
                     </div>
                   </div>
 
+                  {/* Detalhes do Pagamento */}
+                  <div className="pt-4 border-t">
+                    <h4 className="font-medium mb-3">Detalhes do Pagamento:</h4>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Método:</span>
+                          <p className="font-medium">{userProfile.payment_details.method}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Valor:</span>
+                          <p className="font-medium">
+                            {userProfile.payment_type === "crypto"
+                              ? `${userProfile.total_deposit_value} ${userProfile.payment_details.currency}`
+                              : `R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")}`}
+                          </p>
+                        </div>
+                        {userProfile.payment_type === "crypto" && (
+                          <>
+                            <div>
+                              <span className="text-gray-500">Criptomoeda:</span>
+                              <p className="font-medium">{userProfile.payment_details.cryptoName}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Equivalente:</span>
+                              <p className="font-medium">
+                                R$ {userProfile.total_deposit_value.toLocaleString("pt-BR")}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="pt-4 border-t">
                     <h4 className="font-medium mb-3">Detalhes do Pacote:</h4>
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -410,7 +531,7 @@ export default function InvestorDashboard() {
                       </div>
                       <div>
                         <span className="text-gray-500">Tokens Base:</span>
-                        <p className="font-medium">{Math.floor(depositValue)}</p>
+                        <p className="font-medium">{Math.floor(userProfile.total_deposit_value)}</p>
                       </div>
                     </div>
                   </div>
@@ -544,20 +665,26 @@ export default function InvestorDashboard() {
                   <div className="flex items-center gap-4">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        depositValue > 0 ? "bg-green-100" : "bg-gray-100"
+                        userProfile.total_deposit_value > 0 ? "bg-green-100" : "bg-gray-100"
                       }`}
                     >
-                      {depositValue > 0 ? (
+                      {userProfile.total_deposit_value > 0 ? (
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       ) : (
                         <Clock className="h-4 w-4 text-gray-400" />
                       )}
                     </div>
                     <div>
-                      <p className={`font-medium ${depositValue > 0 ? "" : "text-gray-500"}`}>Investimento Realizado</p>
+                      <p className={`font-medium ${userProfile.total_deposit_value > 0 ? "" : "text-gray-500"}`}>
+                        Investimento Realizado
+                      </p>
                       <p className="text-sm text-gray-500">
-                        {depositValue > 0
-                          ? `R$ ${depositValue.toLocaleString("pt-BR")} investidos`
+                        {userProfile.total_deposit_value > 0
+                          ? `${userProfile.payment_details.method}: ${
+                              userProfile.payment_type === "crypto"
+                                ? `${userProfile.total_deposit_value} ${userProfile.payment_details.currency}`
+                                : `R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")}`
+                            }`
                           : "Aguardando investimento"}
                       </p>
                     </div>
@@ -662,6 +789,7 @@ export default function InvestorDashboard() {
           </Card>
         )}
       </div>
+
       {/* Modal de Confirmação de Resgate */}
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -683,8 +811,10 @@ export default function InvestorDashboard() {
                     </p>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-800">
-                        <strong>Valor:</strong> R${" "}
-                        {Number.parseFloat(userProfile?.deposit_value || "0").toLocaleString("pt-BR")}
+                        <strong>Valor:</strong>{" "}
+                        {userProfile.payment_type === "crypto"
+                          ? `${userProfile.total_deposit_value} ${userProfile.payment_details.currency} (≈ R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")})`
+                          : `R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")}`}
                       </p>
                       <p className="text-sm text-blue-800">
                         <strong>Chave PIX:</strong> {userProfile?.cpf}
@@ -727,12 +857,18 @@ export default function InvestorDashboard() {
                         <div className="flex justify-between">
                           <span>Valor a ser devolvido:</span>
                           <span className="font-medium">
-                            R$ {Number.parseFloat(userProfile.deposit_value || "0").toLocaleString("pt-BR")}
+                            {userProfile.payment_type === "crypto"
+                              ? `${userProfile.total_deposit_value} ${userProfile.payment_details.currency}`
+                              : `R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")}`}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span>Chave PIX:</span>
                           <span className="font-medium">{userProfile.cpf}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Método original:</span>
+                          <span className="font-medium">{userProfile.payment_details.method}</span>
                         </div>
                       </div>
                     </div>
