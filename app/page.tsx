@@ -486,6 +486,45 @@ export default function AgroDeriLanding() {
     //    console.log("🖼️ QR Code de fallback gerado:", qrCodeApiUrl)
   }
 
+  // Atualizar a função generateCryptoAddress para usar a API route local
+  const generateCryptoAddress = async () => {
+    try {
+      setCryptoLoading(true)
+      console.log("🔄 Gerando endereço crypto para:", selectedCrypto)
+
+      // Usar a API route local ao invés da requisição direta
+      const response = await fetch("/api/generate-crypto-address/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          coin: selectedCrypto,
+        }),
+      })
+
+      console.log("📊 Status da resposta crypto:", response.status)
+
+      const result = await response.json()
+      console.log("📦 Resposta da API crypto:", result)
+
+      if (response.ok && result.success && result.address_info) {
+        console.log("✅ Endereço crypto gerado com sucesso!")
+        setCryptoAddress(result.address_info.address)
+        setCryptoNetwork(result.address_info.network)
+        setCryptoNetworkName(result.address_info.networkName)
+      } else {
+        console.error("❌ Erro ao gerar endereço crypto:", result)
+        alert("Erro ao gerar endereço crypto: " + (result.error || result.message || "Erro desconhecido"))
+      }
+    } catch (error) {
+      console.error("💥 Erro na geração do endereço crypto:", error)
+      alert("Erro de conexão ao gerar endereço crypto.")
+    } finally {
+      setCryptoLoading(false)
+    }
+  }
+
   const copyPixCode = async () => {
     try {
       await navigator.clipboard.writeText(paymentString)
@@ -902,7 +941,10 @@ export default function AgroDeriLanding() {
       confirmPassword: "",
     })
     setSelectedCrypto("")
-    setIsPrefilledUser(false) // Resetar flag de usuário pré-cadastrado
+    setCryptoAddress("")
+    setCryptoNetwork("")
+    setCryptoNetworkName("")
+    setIsPrefilledUser(false)
   }
 
   const handleBack = () => {
@@ -965,6 +1007,22 @@ export default function AgroDeriLanding() {
     if (color === "indigo") return "border-indigo-200 bg-indigo-50 text-indigo-600"
     return "border-gray-200 bg-gray-50 text-gray-600"
   }
+
+  const getPopularCryptos = () => {
+    return AVAILABLE_CRYPTOS.slice(0, 3)
+  }
+
+  const [cryptoAddress, setCryptoAddress] = useState("")
+  const [cryptoNetwork, setCryptoNetwork] = useState("")
+  const [cryptoNetworkName, setCryptoNetworkName] = useState("")
+  const [cryptoLoading, setCryptoLoading] = useState(false)
+
+  // Gerar endereço crypto quando chegar no step 2.7
+  useEffect(() => {
+    if (currentStep === 2.7 && selectedCrypto) {
+      generateCryptoAddress()
+    }
+  }, [currentStep, selectedCrypto])
 
   return (
     <div className="min-h-screen bg-white">
@@ -1517,6 +1575,125 @@ export default function AgroDeriLanding() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Seleção do método de pagamento */}
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-base font-medium">Escolha o método de pagamento:</Label>
+                      <div className="grid grid-cols-1 gap-3 mt-3">
+                        <div
+                          className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                            paymentMethod === "pix"
+                              ? "border-green-500 bg-green-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                          onClick={() => setPaymentMethod("pix")}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full border-2 border-green-500 flex items-center justify-center">
+                              {paymentMethod === "pix" && <div className="w-3 h-3 bg-green-500 rounded-full" />}
+                            </div>
+                            <div>
+                              <p className="font-medium">PIX</p>
+                              <p className="text-sm text-gray-600">Pagamento instantâneo</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                            paymentMethod === "crypto"
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                          onClick={() => setPaymentMethod("crypto")}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full border-2 border-blue-500 flex items-center justify-center">
+                              {paymentMethod === "crypto" && <div className="w-3 h-3 bg-blue-500 rounded-full" />}
+                            </div>
+                            <div>
+                              <p className="font-medium">Criptomoeda</p>
+                              <p className="text-sm text-gray-600">Bitcoin, USDT, Ethereum e outras</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Seleção de Crypto se método for crypto */}
+                    {paymentMethod === "crypto" && (
+                      <div>
+                        <Label className="text-base font-medium">Escolha a criptomoeda:</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+                          {getPopularCryptos().map((crypto) => (
+                            <div
+                              key={crypto.coin}
+                              className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                selectedCrypto === crypto.coin
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
+                              onClick={() => setSelectedCrypto(crypto.coin)}
+                            >
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={crypto.icon || "/placeholder.svg"}
+                                  alt={crypto.coin}
+                                  className="w-6 h-6"
+                                  onError={(e) => {
+                                    e.target.src = "/placeholder.svg?height=24&width=24"
+                                  }}
+                                />
+                                <div>
+                                  <p className="font-medium text-sm">{crypto.coin}</p>
+                                  <p className="text-xs text-gray-600">{crypto.name}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {!showAllCryptos && (
+                          <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAllCryptos(true)}>
+                            Ver todas as criptomoedas
+                          </Button>
+                        )}
+
+                        {showAllCryptos && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+                            {AVAILABLE_CRYPTOS.filter(
+                              (crypto) => !getPopularCryptos().some((popular) => popular.coin === crypto.coin),
+                            ).map((crypto) => (
+                              <div
+                                key={crypto.coin}
+                                className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                  selectedCrypto === crypto.coin
+                                    ? "border-blue-500 bg-blue-50"
+                                    : "border-gray-200 hover:border-gray-300"
+                                }`}
+                                onClick={() => setSelectedCrypto(crypto.coin)}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={crypto.icon || "/placeholder.svg"}
+                                    alt={crypto.coin}
+                                    className="w-6 h-6"
+                                    onError={(e) => {
+                                      e.target.src = "/placeholder.svg?height=24&width=24"
+                                    }}
+                                  />
+                                  <div>
+                                    <p className="font-medium text-sm">{crypto.coin}</p>
+                                    <p className="text-xs text-gray-600">{crypto.name}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Resumo do Investimento */}
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="font-semibold text-blue-900 mb-2">Resumo do Investimento</h3>
@@ -1527,7 +1704,9 @@ export default function AgroDeriLanding() {
                       </div>
                       <div className="flex justify-between">
                         <span>Método:</span>
-                        <span className="capitalize">PIX</span>
+                        <span className="capitalize">
+                          {paymentMethod === "pix" ? "PIX" : `${selectedCrypto || "Crypto"}`}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1536,14 +1715,20 @@ export default function AgroDeriLanding() {
                     <Button variant="outline" onClick={handleBack} className="flex-1">
                       Voltar
                     </Button>
-                    <Button onClick={handlePayment} className="flex-1" disabled={loading}>
+                    <Button
+                      onClick={handlePayment}
+                      className="flex-1"
+                      disabled={loading || (paymentMethod === "crypto" && !selectedCrypto)}
+                    >
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Gerando PIX...
+                          {paymentMethod === "pix" ? "Gerando PIX..." : "Gerando endereço..."}
                         </>
-                      ) : (
+                      ) : paymentMethod === "pix" ? (
                         "Gerar PIX"
+                      ) : (
+                        "Gerar Endereço Crypto"
                       )}
                     </Button>
                   </div>
@@ -1728,40 +1913,64 @@ export default function AgroDeriLanding() {
                       </div>
                     </div>
 
-                    {/* QR Code Placeholder */}
-                    <div className="w-64 h-64 mx-auto mb-4 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                      <div className="text-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">Gerando endereço...</p>
+                    {/* Loading ou Endereço */}
+                    {cryptoLoading ? (
+                      <div className="w-64 h-64 mx-auto mb-4 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <div className="text-center">
+                          <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">Gerando endereço...</p>
+                        </div>
                       </div>
-                    </div>
+                    ) : cryptoAddress ? (
+                      <div className="space-y-4">
+                        {/* QR Code do endereço */}
+                        <div className="w-64 h-64 mx-auto mb-4 flex items-center justify-center">
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(cryptoAddress)}`}
+                            alt="QR Code do endereço crypto"
+                            className="w-full h-full object-contain border rounded-lg"
+                            onError={(e) => {
+                              e.target.src = "/placeholder.svg?height=256&width=256&text=QR+Code+Indisponível"
+                              e.target.style.backgroundColor = "#f3f4f6"
+                            }}
+                          />
+                        </div>
 
-                    {/* Crypto Address */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-2">Endereço da carteira:</p>
-                      <div className="bg-white border rounded p-3 text-xs font-mono break-all">
-                        1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+                        {/* Endereço para copiar */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-2">Endereço da carteira:</p>
+                          <div className="bg-white border rounded p-3 text-xs font-mono break-all">{cryptoAddress}</div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-2"
+                            onClick={() => {
+                              navigator.clipboard.writeText(cryptoAddress)
+                              alert("Endereço copiado!")
+                            }}
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copiar Endereço
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-2"
-                        onClick={() => {
-                          navigator.clipboard.writeText("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa")
-                          alert("Endereço copiado!")
-                        }}
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copiar Endereço
-                      </Button>
-                    </div>
+                    ) : (
+                      <div className="w-64 h-64 mx-auto mb-4 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-500 mb-2">Erro ao gerar endereço</p>
+                          <Button size="sm" variant="outline" onClick={generateCryptoAddress}>
+                            Tentar Novamente
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="text-center space-y-2 mt-4">
                       <p className="text-sm text-gray-600">
                         <strong>Valor:</strong> R$ {amount.toLocaleString()}
                       </p>
                       <p className="text-sm text-gray-600">
-                        <strong>Rede:</strong> {selectedCrypto === "USDT" ? "TRC20 (Tron)" : "Mainnet"}
+                        <strong>Rede:</strong> {cryptoNetworkName || cryptoNetwork || "Mainnet"}
                       </p>
                     </div>
                   </div>
@@ -1774,8 +1983,8 @@ export default function AgroDeriLanding() {
                       <div className="text-sm">
                         <p className="font-medium text-yellow-800 mb-1">Após enviar a criptomoeda</p>
                         <p className="text-yellow-700">
-                          Clique no botão "Já fiz o pagamento" para verificar se a transação foi processada e continuar
-                          para a próxima etapa.
+                          Envie exatamente o valor em {selectedCrypto} equivalente a R$ {amount.toLocaleString()} para o
+                          endereço acima. Após a confirmação na blockchain, clique em "Já fiz o pagamento".
                         </p>
                       </div>
                     </div>
@@ -1788,7 +1997,7 @@ export default function AgroDeriLanding() {
                     {paymentConfirmed ? (
                       <Button className="flex-1 bg-green-600 text-white" disabled>
                         <CheckCircle className="mr-2 h-4 w-4" />
-                        Pagamento Confirmado, gerar o contrato
+                        Pagamento Confirmado
                       </Button>
                     ) : (
                       <Button
