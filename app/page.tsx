@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import { maskCPF, maskRG, maskPhone, unmaskValue } from "@/utils/input-masks"
 import { AVAILABLE_CRYPTOS } from "@/utils/crypto-list"
+import { useSearchParams } from "next/navigation"
 
 export default function AgroDeriLanding() {
   const [showCheckout, setShowCheckout] = useState(false)
@@ -80,6 +81,8 @@ export default function AgroDeriLanding() {
 
   // Adicionar hook para detectar mobile após os outros estados
   const [isMobile, setIsMobile] = useState(false)
+
+  const searchParams = useSearchParams()
 
   const packages = [
     {
@@ -245,6 +248,35 @@ export default function AgroDeriLanding() {
     }
   }, [])
 
+  // Detectar step da URL e abrir checkout automaticamente
+  useEffect(() => {
+    const stepParam = searchParams.get("step")
+
+    if (stepParam) {
+      setShowCheckout(true)
+
+      // Mapear os steps da URL para os números internos
+      switch (stepParam) {
+        case "cadastro":
+          setCurrentStep(1)
+          break
+        case "pagamento":
+          setCurrentStep(2)
+          break
+        case "contrato":
+          setCurrentStep(3)
+          break
+        default:
+          setCurrentStep(0)
+      }
+
+      // Scroll para o checkout após um pequeno delay
+      setTimeout(() => {
+        checkoutRef.current?.scrollIntoView({ behavior: "smooth" })
+      }, 100)
+    }
+  }, [searchParams])
+
   // Adicionar useEffect para detectar mobile após os useEffects existentes
   useEffect(() => {
     const checkMobile = () => {
@@ -371,6 +403,7 @@ export default function AgroDeriLanding() {
         if (contractSuccess) {
           // Avançar para tela de confirmação
           setCurrentStep(3)
+          updateUrlForStep(3)
         }
       } else if (result.success && result.data) {
         // Verificar se é pagamento crypto
@@ -403,6 +436,7 @@ export default function AgroDeriLanding() {
             if (contractSuccess) {
               // Avançar para tela de confirmação
               setCurrentStep(3)
+              updateUrlForStep(3)
             }
           } else {
             console.log("⏳ Pagamento crypto ainda não confirmado")
@@ -424,6 +458,7 @@ export default function AgroDeriLanding() {
             if (contractSuccess) {
               // Avançar para tela de confirmação
               setCurrentStep(3)
+              updateUrlForStep(3)
             }
           } else {
             console.log("⏳ Pagamento PIX ainda não confirmado")
@@ -606,6 +641,7 @@ export default function AgroDeriLanding() {
     setSelectedPackage(pkg.id)
     setAmount(pkg.minValue)
     setCurrentStep(1)
+    updateUrlForStep(1)
   }
 
   const validateCPF = (cpf: string) => {
@@ -891,6 +927,7 @@ export default function AgroDeriLanding() {
           //       console.log("✅ Usuário registrado com sucesso!", result)
           alert("Registro bem-sucedido!")
           setCurrentStep(2)
+          updateUrlForStep(2)
         } else {
           //      console.error("❌ Erro no registro:", result)
           handleRegistrationErrors(result)
@@ -954,6 +991,25 @@ export default function AgroDeriLanding() {
     setFormErrors(backendErrors)
   }
 
+  // Função para atualizar a URL baseada no step atual
+  const updateUrlForStep = (step: number) => {
+    const stepNames = {
+      0: "",
+      1: "cadastro",
+      2: "pagamento",
+      2.5: "pagamento",
+      2.7: "pagamento",
+      3: "contrato",
+    }
+
+    const stepName = stepNames[step]
+    if (stepName) {
+      window.history.replaceState({}, "", `/?step=${stepName}`)
+    } else {
+      window.history.replaceState({}, "", "/")
+    }
+  }
+
   const handleNext = async () => {
     if (currentStep === 1) {
       if (!validateForm()) {
@@ -964,8 +1020,36 @@ export default function AgroDeriLanding() {
     }
 
     if (currentStep < 3) {
-      setCurrentStep(currentStep + 1)
+      const newStep = currentStep + 1
+      setCurrentStep(newStep)
+      updateUrlForStep(newStep)
     }
+  }
+
+  const handleBack = () => {
+    if (currentStep === 1) {
+      // Se estiver no step 1 (Dados), voltar para step 0 (Pacotes) e resetar
+      resetCheckout()
+      updateUrlForStep(0)
+    } else if (currentStep > 0) {
+      const newStep = currentStep - 1
+      setCurrentStep(newStep)
+      updateUrlForStep(newStep)
+    }
+  }
+
+  const handlePayment = () => {
+    setLoading(true)
+    setTimeout(() => {
+      setLoading(false)
+      if (paymentMethod === "pix") {
+        setCurrentStep(2.5) // PIX QR Code
+        updateUrlForStep(2.5)
+      } else if (paymentMethod === "crypto") {
+        setCurrentStep(2.7) // Crypto Address
+        updateUrlForStep(2.7)
+      }
+    }, 2000)
   }
 
   const resetCheckout = () => {
@@ -1005,27 +1089,6 @@ export default function AgroDeriLanding() {
     setCryptoNetwork("")
     setCryptoNetworkName("")
     setIsPrefilledUser(false)
-  }
-
-  const handleBack = () => {
-    if (currentStep === 1) {
-      // Se estiver no step 1 (Dados), voltar para step 0 (Pacotes) e resetar
-      resetCheckout()
-    } else if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
-
-  const handlePayment = () => {
-    setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      if (paymentMethod === "pix") {
-        setCurrentStep(2.5) // PIX QR Code
-      } else if (paymentMethod === "crypto") {
-        setCurrentStep(2.7) // Crypto Address (novo step)
-      }
-    }, 2000)
   }
 
   const handleInputChange = (field: string, value: string) => {
