@@ -575,12 +575,7 @@ export default function InvestorDashboard() {
                               <span className="text-gray-500">Criptomoeda:</span>
                               <p className="font-medium">{userProfile.payment_details.cryptoName}</p>
                             </div>
-                            <div>
-                              <span className="text-gray-500">Equivalente:</span>
-                              <p className="font-medium">
-                                R$ {userProfile.total_deposit_value.toLocaleString("pt-BR")}
-                              </p>
-                            </div>
+                           
                           </>
                         )}
                       </div>
