@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Sprout,
   User,
@@ -1079,35 +1078,16 @@ export default function InvestorDashboard() {
 
                     <div>
                       <Label htmlFor="crypto-network">Rede *</Label>
-                      <Select value={cryptoNetwork} onValueChange={setCryptoNetwork}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Selecione a rede" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {userProfile?.payment_details?.cryptoName === "USDT" && (
-                            <>
-                              <SelectItem value="TRC20">TRC20 (Tron)</SelectItem>
-                              <SelectItem value="ERC20">ERC20 (Ethereum)</SelectItem>
-                              <SelectItem value="BEP20">BEP20 (BSC)</SelectItem>
-                            </>
-                          )}
-                          {userProfile?.payment_details?.cryptoName === "BTC" && (
-                            <>
-                              <SelectItem value="Bitcoin">Bitcoin</SelectItem>
-                              <SelectItem value="Lightning">Lightning Network</SelectItem>
-                            </>
-                          )}
-                          {userProfile?.payment_details?.cryptoName === "ETH" && (
-                            <SelectItem value="ERC20">ERC20 (Ethereum)</SelectItem>
-                          )}
-                          {userProfile?.payment_details?.cryptoName === "BNB" && (
-                            <SelectItem value="BEP20">BEP20 (BSC)</SelectItem>
-                          )}
-                          {/* Adicionar outras redes conforme necessário */}
-                          <SelectItem value="OTHER">Outra rede</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-gray-500 mt-1">Selecione a rede correta para evitar perda de fundos</p>
+                      <Input
+                        id="crypto-network"
+                        placeholder="Ex: TRC20, ERC20, BEP20, Bitcoin, etc."
+                        value={cryptoNetwork}
+                        onChange={(e) => setCryptoNetwork(e.target.value)}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Digite a rede correta para evitar perda de fundos (Ex: TRC20 para Tron, ERC20 para Ethereum)
+                      </p>
                     </div>
 
                     {userProfile && (

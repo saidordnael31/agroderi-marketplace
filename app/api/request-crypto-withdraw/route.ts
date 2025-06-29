@@ -28,7 +28,6 @@ export async function POST(request: NextRequest) {
       "Content-Type": "application/json",
       Accept: "application/json",
       "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
-      "User-Agent": "AgroDeri-Frontend/1.0",
     }
 
     const data = {
