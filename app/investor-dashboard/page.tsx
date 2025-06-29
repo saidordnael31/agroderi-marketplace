@@ -5,6 +5,9 @@ import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Sprout,
   User,
@@ -18,6 +21,8 @@ import {
   CheckCircle,
   Clock,
   Coins,
+  Wallet,
+  Copy,
 } from "lucide-react"
 import { maskCPF, maskPhone, maskRG } from "@/utils/input-masks"
 
@@ -32,6 +37,13 @@ export default function InvestorDashboard() {
   const [contractGenerating, setContractGenerating] = useState(false)
   const [contractGenerated, setContractGenerated] = useState(false)
   const [contractDownloadUrl, setContractDownloadUrl] = useState("")
+
+  // Estados para resgate crypto
+  const [showCryptoWithdrawModal, setShowCryptoWithdrawModal] = useState(false)
+  const [cryptoWithdrawLoading, setCryptoWithdrawLoading] = useState(false)
+  const [cryptoWithdrawSuccess, setCryptoWithdrawSuccess] = useState(false)
+  const [cryptoAddress, setCryptoAddress] = useState("")
+  const [cryptoNetwork, setCryptoNetwork] = useState("")
 
   const userEmail = searchParams.get("user")
   const token = searchParams.get("token")
@@ -165,6 +177,56 @@ export default function InvestorDashboard() {
     }
   }
 
+  const handleCryptoWithdrawRequest = async () => {
+    try {
+      setCryptoWithdrawLoading(true)
+      console.log("🪙 Solicitando resgate crypto...")
+
+      // Validar campos
+      if (!cryptoAddress.trim()) {
+        alert("Por favor, insira o endereço da carteira")
+        return
+      }
+
+      if (!cryptoNetwork.trim()) {
+        alert("Por favor, selecione a rede")
+        return
+      }
+
+      const response = await fetch("/api/request-crypto-withdraw/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cpf: userProfile.cpf,
+          address: cryptoAddress.trim(),
+          coin: userProfile.payment_details.cryptoName,
+          amount: userProfile.total_deposit_value,
+          network: cryptoNetwork,
+        }),
+      })
+
+      console.log("📊 Status da resposta de resgate crypto:", response.status)
+
+      const result = await response.json()
+      console.log("📦 Resultado do resgate crypto:", result)
+
+      if (result.success) {
+        console.log("✅ Resgate crypto solicitado com sucesso!")
+        setCryptoWithdrawSuccess(true)
+      } else {
+        console.error("❌ Erro ao solicitar resgate crypto:", result)
+        alert("Erro ao solicitar resgate: " + (result.error || "Erro desconhecido"))
+      }
+    } catch (error) {
+      console.error("💥 Erro na solicitação de resgate crypto:", error)
+      alert("Erro de conexão ao solicitar resgate. Tente novamente.")
+    } finally {
+      setCryptoWithdrawLoading(false)
+    }
+  }
+
   const handleGenerateContract = async () => {
     try {
       setContractGenerating(true)
@@ -251,6 +313,18 @@ export default function InvestorDashboard() {
     fetchUserProfile()
   }
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    alert("Copiado para a área de transferência!")
+  }
+
+  const resetCryptoWithdrawModal = () => {
+    setCryptoAddress("")
+    setCryptoNetwork("")
+    setCryptoWithdrawSuccess(false)
+    setShowCryptoWithdrawModal(false)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -272,7 +346,7 @@ export default function InvestorDashboard() {
             <h3 className="text-lg font-semibold mb-2">Erro ao carregar dados</h3>
             <p className="text-gray-600 mb-4">{error}</p>
             <div className="space-y-2">
-              <Button onClick={handleRefresh} variant="outline" className="w-full">
+              <Button onClick={handleRefresh} variant="outline" className="w-full bg-transparent">
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Tentar Novamente
               </Button>
@@ -614,14 +688,28 @@ export default function InvestorDashboard() {
                     </Button>
                   )}
 
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    onClick={() => setShowWithdrawModal(true)}
-                    disabled={!hasInvestment}
-                  >
-                    Pedir resgate e cancelar investimento
-                  </Button>
+                  {/* Botões de Resgate - diferentes para PIX e Crypto */}
+                  {userProfile.payment_type === "crypto" ? (
+                    <Button
+                      className="w-full bg-transparent"
+                      variant="outline"
+                      onClick={() => setShowCryptoWithdrawModal(true)}
+                      disabled={!hasInvestment}
+                    >
+                      <Wallet className="mr-2 h-4 w-4" />
+                      Pedir resgate em {userProfile.payment_details.cryptoName}
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full bg-transparent"
+                      variant="outline"
+                      onClick={() => setShowWithdrawModal(true)}
+                      disabled={!hasInvestment}
+                    >
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      Pedir resgate via PIX
+                    </Button>
+                  )}
 
                   <div className="pt-4 border-t">
                     <h4 className="font-medium mb-2">Próximos Passos:</h4>
@@ -790,14 +878,14 @@ export default function InvestorDashboard() {
         )}
       </div>
 
-      {/* Modal de Confirmação de Resgate */}
+      {/* Modal de Confirmação de Resgate PIX */}
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle className="text-xl text-center text-red-600">⚠️ Confirmar Resgate</CardTitle>
+              <CardTitle className="text-xl text-center text-red-600">⚠️ Confirmar Resgate PIX</CardTitle>
               <CardDescription className="text-center">
-                Tem certeza que deseja cancelar seu investimento e solicitar o resgate?
+                Tem certeza que deseja cancelar seu investimento e solicitar o resgate via PIX?
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -811,10 +899,7 @@ export default function InvestorDashboard() {
                     </p>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-800">
-                        <strong>Valor:</strong>{" "}
-                        {userProfile.payment_type === "crypto"
-                          ? `${userProfile.total_deposit_value} ${userProfile.payment_details.currency} (≈ R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")})`
-                          : `R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")}`}
+                        <strong>Valor:</strong> R$ {userProfile.total_deposit_value.toLocaleString("pt-BR")}
                       </p>
                       <p className="text-sm text-blue-800">
                         <strong>Chave PIX:</strong> {userProfile?.cpf}
@@ -857,9 +942,7 @@ export default function InvestorDashboard() {
                         <div className="flex justify-between">
                           <span>Valor a ser devolvido:</span>
                           <span className="font-medium">
-                            {userProfile.payment_type === "crypto"
-                              ? `${userProfile.total_deposit_value} ${userProfile.payment_details.currency}`
-                              : `R$ ${userProfile.total_deposit_value.toLocaleString("pt-BR")}`}
+                            R$ {userProfile.total_deposit_value.toLocaleString("pt-BR")}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -895,6 +978,187 @@ export default function InvestorDashboard() {
                         </>
                       ) : (
                         "Confirmar Resgate"
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Resgate Crypto */}
+      {showCryptoWithdrawModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle className="text-xl text-center text-orange-600">
+                <Wallet className="inline mr-2 h-6 w-6" />
+                Resgate em {userProfile?.payment_details?.cryptoName}
+              </CardTitle>
+              <CardDescription className="text-center">
+                Informe o endereço da sua carteira para receber o resgate em criptomoeda
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {cryptoWithdrawSuccess ? (
+                <div className="text-center space-y-4">
+                  <div className="text-6xl">🪙</div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-green-600 mb-2">Resgate Crypto Solicitado!</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Seu resgate em {userProfile?.payment_details?.cryptoName} foi solicitado com sucesso e será
+                      processado em breve.
+                    </p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-left">
+                      <p className="text-sm text-blue-800">
+                        <strong>Valor:</strong> {userProfile?.total_deposit_value}{" "}
+                        {userProfile?.payment_details?.currency}
+                      </p>
+                      <p className="text-sm text-blue-800">
+                        <strong>Endereço:</strong>
+                        <span className="font-mono text-xs break-all">{cryptoAddress}</span>
+                      </p>
+                      <p className="text-sm text-blue-800">
+                        <strong>Rede:</strong> {cryptoNetwork}
+                      </p>
+                    </div>
+                  </div>
+                  <Button onClick={resetCryptoWithdrawModal} className="w-full">
+                    Fechar
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center mt-0.5">
+                        <Coins className="text-white h-3 w-3" />
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-orange-800 mb-1">Resgate em Criptomoeda</p>
+                        <p className="text-orange-700">
+                          Você receberá {userProfile?.total_deposit_value} {userProfile?.payment_details?.cryptoName} no
+                          endereço informado. Verifique cuidadosamente o endereço e a rede antes de confirmar.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="crypto-address">Endereço da Carteira *</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="crypto-address"
+                          placeholder={`Endereço da sua carteira ${userProfile?.payment_details?.cryptoName}`}
+                          value={cryptoAddress}
+                          onChange={(e) => setCryptoAddress(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={async () => {
+                            try {
+                              const text = await navigator.clipboard.readText()
+                              setCryptoAddress(text)
+                            } catch (err) {
+                              console.error("Erro ao colar:", err)
+                            }
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Cole o endereço da sua carteira {userProfile?.payment_details?.cryptoName}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="crypto-network">Rede *</Label>
+                      <Select value={cryptoNetwork} onValueChange={setCryptoNetwork}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Selecione a rede" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {userProfile?.payment_details?.cryptoName === "USDT" && (
+                            <>
+                              <SelectItem value="TRC20">TRC20 (Tron)</SelectItem>
+                              <SelectItem value="ERC20">ERC20 (Ethereum)</SelectItem>
+                              <SelectItem value="BEP20">BEP20 (BSC)</SelectItem>
+                            </>
+                          )}
+                          {userProfile?.payment_details?.cryptoName === "BTC" && (
+                            <>
+                              <SelectItem value="Bitcoin">Bitcoin</SelectItem>
+                              <SelectItem value="Lightning">Lightning Network</SelectItem>
+                            </>
+                          )}
+                          {userProfile?.payment_details?.cryptoName === "ETH" && (
+                            <SelectItem value="ERC20">ERC20 (Ethereum)</SelectItem>
+                          )}
+                          {userProfile?.payment_details?.cryptoName === "BNB" && (
+                            <SelectItem value="BEP20">BEP20 (BSC)</SelectItem>
+                          )}
+                          {/* Adicionar outras redes conforme necessário */}
+                          <SelectItem value="OTHER">Outra rede</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">Selecione a rede correta para evitar perda de fundos</p>
+                    </div>
+
+                    {userProfile && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-medium mb-2">Resumo do Resgate:</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span>Criptomoeda:</span>
+                            <span className="font-medium">{userProfile.payment_details.cryptoName}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Valor:</span>
+                            <span className="font-medium">
+                              {userProfile.total_deposit_value} {userProfile.payment_details.currency}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Equivalente:</span>
+                            <span className="font-medium">
+                              R$ {userProfile.total_deposit_value.toLocaleString("pt-BR")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={resetCryptoWithdrawModal}
+                      className="flex-1 bg-transparent"
+                      disabled={cryptoWithdrawLoading}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleCryptoWithdrawRequest}
+                      className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                      disabled={cryptoWithdrawLoading || !cryptoAddress.trim() || !cryptoNetwork}
+                    >
+                      {cryptoWithdrawLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          <Wallet className="mr-2 h-4 w-4" />
+                          Confirmar Resgate
+                        </>
                       )}
                     </Button>
                   </div>
