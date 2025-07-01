@@ -52,7 +52,6 @@ export default function AgroDeriLanding() {
   const [paymentString, setPaymentString] = useState("")
   const [paymentConfirmed, setPaymentConfirmed] = useState(false)
   const [checkingPayment, setCheckingPayment] = useState(false)
-  // Adicionar novos estados após os estados existentes
   const [contractCreated, setContractCreated] = useState(false)
   const [contractData, setContractData] = useState(null)
   const [documentIdClicksign, setDocumentIdClicksign] = useState("")
@@ -69,18 +68,31 @@ export default function AgroDeriLanding() {
   })
   const [selectedCrypto, setSelectedCrypto] = useState("")
   const [showAllCryptos, setShowAllCryptos] = useState(false)
-
-  // Adicionar estado para controlar se é usuário pré-cadastrado
   const [isPrefilledUser, setIsPrefilledUser] = useState(false)
 
   const checkoutRef = useRef<HTMLDivElement>(null)
   const qrCodeRef = useRef<HTMLCanvasElement>(null)
 
-  const [showPassword, setShowConfirmPassword] = useState(false)
-  const [showConfirmPassword, setShowPassword] = useState(false)
-
-  // Adicionar hook para detectar mobile após os outros estados
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [loginData, setLoginData] = useState({
+    username: "",
+    password: "",
+  })
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [loginErrors, setLoginErrors] = useState({
+    username: "",
+    password: "",
+    general: "",
+  })
+
+  const [cryptoAddress, setCryptoAddress] = useState("")
+  const [cryptoNetwork, setCryptoNetwork] = useState("")
+  const [cryptoNetworkName, setCryptoNetworkName] = useState("")
+  const [cryptoLoading, setCryptoLoading] = useState(false)
 
   const searchParams = useSearchParams()
 
@@ -193,25 +205,88 @@ export default function AgroDeriLanding() {
     }
   }, [currentStep, amount, userData.cpf])
 
-  // Adicionar novos estados para o modal de login após os estados existentes:
-  const [showLoginModal, setShowLoginModal] = useState(false)
-  const [loginData, setLoginData] = useState({
-    username: "",
-    password: "",
-  })
-  const [loginLoading, setLoginLoading] = useState(false)
-  const [loginErrors, setLoginErrors] = useState({
-    username: "",
-    password: "",
-    general: "",
-  })
+  // Gerar endereço crypto quando chegar no step 2.7
+  useEffect(() => {
+    if (currentStep === 2.7 && selectedCrypto) {
+      generateCryptoAddress()
+    }
+  }, [currentStep, selectedCrypto])
+
+  // Detectar step da URL e abrir checkout automaticamente
+  useEffect(() => {
+    const stepParam = searchParams?.get("step")
+
+    if (stepParam) {
+      setShowCheckout(true)
+
+      // Mapear os steps da URL para os números internos
+      switch (stepParam) {
+        case "cadastro":
+          setCurrentStep(1)
+          break
+        case "pagamento":
+          setCurrentStep(2)
+          break
+        case "contrato":
+          setCurrentStep(3)
+          break
+        default:
+          setCurrentStep(0)
+      }
+
+      // Scroll para o checkout após um pequeno delay
+      setTimeout(() => {
+        checkoutRef.current?.scrollIntoView({ behavior: "smooth" })
+      }, 100)
+    }
+  }, [searchParams])
+
+  // Adicionar useEffect para detectar mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+        userAgent.toLowerCase(),
+      )
+      const isSmallScreen = window.innerWidth <= 768
+      setIsMobile(isMobileDevice || isSmallScreen)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  // Adicionar useEffect para verificar retorno do localStorage
+  useEffect(() => {
+    // Verificar se o usuário está retornando da área do investidor
+    const returnUrl = localStorage.getItem("agroDeriReturnUrl")
+    const userData = localStorage.getItem("agroDeriUserData")
+
+    if (returnUrl && userData) {
+      try {
+        const user = JSON.parse(userData)
+
+        // Mostrar mensagem de boas-vindas de volta
+        setTimeout(() => {
+          alert(`Olá novamente, ${user.name}! Você retornou da área do investidor.`)
+        }, 1000)
+
+        // Limpar dados salvos
+        localStorage.removeItem("agroDeriReturnUrl")
+        localStorage.removeItem("agroDeriUserData")
+      } catch (error) {
+        console.error("Erro ao processar dados de retorno:", error)
+      }
+    }
+  }, [])
 
   // Adicionar após os useEffects existentes
   useEffect(() => {
-    const handleMessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       if (event.data.type === "PREFILL_INVESTMENT_DATA") {
         const data = event.data.data
-        // console.log("📝 Pré-preenchendo dados do usuário logado:", data)
 
         // Marcar como usuário pré-cadastrado
         setIsPrefilledUser(true)
@@ -248,81 +323,9 @@ export default function AgroDeriLanding() {
     }
   }, [])
 
-  // Detectar step da URL e abrir checkout automaticamente
-  useEffect(() => {
-    const stepParam = searchParams.get("step")
-
-    if (stepParam) {
-      setShowCheckout(true)
-
-      // Mapear os steps da URL para os números internos
-      switch (stepParam) {
-        case "cadastro":
-          setCurrentStep(1)
-          break
-        case "pagamento":
-          setCurrentStep(2)
-          break
-        case "contrato":
-          setCurrentStep(3)
-          break
-        default:
-          setCurrentStep(0)
-      }
-
-      // Scroll para o checkout após um pequeno delay
-      setTimeout(() => {
-        checkoutRef.current?.scrollIntoView({ behavior: "smooth" })
-      }, 100)
-    }
-  }, [searchParams])
-
-  // Adicionar useEffect para detectar mobile após os useEffects existentes
-  useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || window.opera
-      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
-        userAgent.toLowerCase(),
-      )
-      const isSmallScreen = window.innerWidth <= 768
-      setIsMobile(isMobileDevice || isSmallScreen)
-    }
-
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-
-    return () => window.removeEventListener("resize", checkMobile)
-  }, [])
-
-  // Adicionar useEffect para verificar retorno do localStorage
-  useEffect(() => {
-    // Verificar se o usuário está retornando da área do investidor
-    const returnUrl = localStorage.getItem("agroDeriReturnUrl")
-    const userData = localStorage.getItem("agroDeriUserData")
-
-    if (returnUrl && userData) {
-      try {
-        const user = JSON.parse(userData)
-        // console.log("🔄 Usuário retornando da área do investidor:", user.name)
-
-        // Mostrar mensagem de boas-vindas de volta
-        setTimeout(() => {
-          alert(`Olá novamente, ${user.name}! Você retornou da área do investidor.`)
-        }, 1000)
-
-        // Limpar dados salvos
-        localStorage.removeItem("agroDeriReturnUrl")
-        localStorage.removeItem("agroDeriUserData")
-      } catch (error) {
-        //  console.error("Erro ao processar dados de retorno:", error)
-      }
-    }
-  }, [])
-
   // Modificar a função createContractDocument para usar a nova API
   const createContractDocument = async () => {
     try {
-      //  console.log("📄 Criando contrato completo...")
       setLoading(true)
 
       const response = await fetch("/api/create-contract-document/", {
@@ -337,25 +340,18 @@ export default function AgroDeriLanding() {
       })
 
       const result = await response.json()
-      //  console.log("📄 Resultado da criação do contrato:", result)
 
       if (result.success) {
-        //    console.log("✅ Contrato completo criado com sucesso!")
         setContractCreated(true)
         setContractData(result.contract)
 
         // Extrair IDs importantes da nova resposta
         if (result.contract) {
-          if (result.contract.envelope_id) {
-            //     console.log("📋 Envelope ID:", result.contract.envelope_id)
-          }
           if (result.contract.document_id) {
             setDocumentIdClicksign(result.contract.document_id)
-            //      console.log("📋 Document ID:", result.contract.document_id)
           }
           if (result.contract.downloadUrl) {
             setContractDownloadUrl(result.contract.downloadUrl)
-            //       console.log("📥 URL de download do contrato:", result.contract.downloadUrl)
           }
         }
 
@@ -484,7 +480,6 @@ export default function AgroDeriLanding() {
   const generateRealPixCode = async () => {
     try {
       setLoading(true)
-      //   console.log("🔄 Gerando PIX real...")
 
       const response = await fetch("/api/generate-pix/", {
         method: "POST",
@@ -497,32 +492,22 @@ export default function AgroDeriLanding() {
         }),
       })
 
-      //   console.log("📊 Status da resposta:", response.status)
-
       const result = await response.json()
-      //   console.log("📦 Resposta completa da API PIX:", JSON.stringify(result, null, 2))
 
       if (response.ok && result.success) {
-        //     console.log("✅ PIX gerado com sucesso!")
-
         // Verificar se temos QR Code
         if (result.qrCode) {
-          //       console.log("🖼️ QR Code encontrado:", result.qrCode)
           setQrCodeUrl(result.qrCode)
         } else {
-          //      console.log("⚠️ QR Code não encontrado na resposta, gerando fallback...")
           generateFallbackPixCode()
         }
 
         // Verificar se temos Payment String
         if (result.paymentString) {
-          //      console.log("💳 Payment String encontrada:", result.paymentString.substring(0, 50) + "...")
           setPaymentString(result.paymentString)
         } else {
-          //      console.log("⚠️ Payment String não encontrada na resposta")
           // Usar dados originais se disponível
           if (result.originalData) {
-            //       console.log("🔍 Tentando extrair dados da resposta original...")
             const originalData = result.originalData
 
             // Tentar diferentes campos possíveis
@@ -531,7 +516,6 @@ export default function AgroDeriLanding() {
 
             for (const field of possibleQrFields) {
               if (originalData[field]) {
-                //         console.log(`📸 QR Code encontrado em ${field}:`, originalData[field])
                 setQrCodeUrl(originalData[field])
                 break
               }
@@ -539,7 +523,6 @@ export default function AgroDeriLanding() {
 
             for (const field of possibleStringFields) {
               if (originalData[field]) {
-                //       console.log(`💳 Payment String encontrada em ${field}:`, originalData[field].substring(0, 50) + "...")
                 setPaymentString(originalData[field])
                 break
               }
@@ -552,12 +535,12 @@ export default function AgroDeriLanding() {
           }
         }
       } else {
-        //     console.error("❌ Erro ao gerar PIX:", result)
+        console.error("❌ Erro ao gerar PIX:", result)
         alert("Erro ao gerar PIX: " + (result.error || "Erro desconhecido"))
         generateFallbackPixCode()
       }
     } catch (error) {
-      //    console.error("💥 Erro na geração do PIX:", error)
+      console.error("💥 Erro na geração do PIX:", error)
       alert("Erro de conexão ao gerar PIX. Usando código de exemplo.")
       generateFallbackPixCode()
     } finally {
@@ -566,19 +549,13 @@ export default function AgroDeriLanding() {
   }
 
   const generateFallbackPixCode = () => {
-    //   console.log("🔄 Gerando PIX de fallback...")
-
     // PIX simulado como fallback
     const pixCodeGenerated = `00020126580014br.gov.bcb.pix0136${userData.email.replace("@", "").replace(".", "")}520400005303986540${amount.toFixed(2)}5802BR5925AGRODERI TECNOLOGIA LTDA6009SAO PAULO62070503***6304ABCD`
     setPaymentString(pixCodeGenerated)
 
-    //   console.log("💳 PIX de fallback gerado:", pixCodeGenerated.substring(0, 50) + "...")
-
     // Gerar QR Code usando API externa
     const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(pixCodeGenerated)}`
     setQrCodeUrl(qrCodeApiUrl)
-
-    //    console.log("🖼️ QR Code de fallback gerado:", qrCodeApiUrl)
   }
 
   // Atualizar a função generateCryptoAddress para usar a API route local
@@ -625,7 +602,6 @@ export default function AgroDeriLanding() {
       await navigator.clipboard.writeText(paymentString)
       alert("Código PIX copiado!")
     } catch (err) {
-      //      console.error("Erro ao copiar:", err)
       alert("Erro ao copiar código PIX")
     }
   }
@@ -706,8 +682,6 @@ export default function AgroDeriLanding() {
         return
       }
 
-      //    console.log("🔐 Fazendo login...")
-
       const response = await fetch("https://api.agroderivative.tech/api/users/login/", {
         method: "POST",
         headers: {
@@ -721,12 +695,8 @@ export default function AgroDeriLanding() {
       })
 
       const result = await response.json()
-      //    console.log("📊 Resultado do login:", result)
 
       if (response.ok) {
-        //     console.log("✅ Login realizado com sucesso!")
-        //   console.log("📊 Dados do login:", result)
-
         // Fechar modal
         setShowLoginModal(false)
 
@@ -774,12 +744,10 @@ export default function AgroDeriLanding() {
             )
           }
         } else {
-          //    console.log("💻 Desktop detectado, usando nova aba")
           // Desktop - usar nova aba normalmente
           const newWindow = window.open(investorUrl, "_blank")
 
           if (!newWindow) {
-            //       console.log("🚫 Pop-up bloqueado no desktop")
             alert("Pop-ups estão bloqueados. Por favor, permita pop-ups para este site e tente novamente.")
           } else {
             alert(
@@ -791,8 +759,6 @@ export default function AgroDeriLanding() {
         // Limpar dados do formulário
         setLoginData({ username: "", password: "" })
       } else {
-        //    console.error("❌ Erro no login:", result)
-
         // Tratar diferentes tipos de erro
         if (result.non_field_errors) {
           setLoginErrors({
@@ -810,7 +776,6 @@ export default function AgroDeriLanding() {
         }
       }
     } catch (error) {
-      //  console.error("💥 Erro na requisição de login:", error)
       setLoginErrors({ username: "", password: "", general: "Erro de conexão. Tente novamente." })
     } finally {
       setLoginLoading(false)
@@ -888,8 +853,8 @@ export default function AgroDeriLanding() {
 
       // Se é usuário pré-cadastrado, pular registro
       if (isPrefilledUser) {
-        //      console.log("✅ Usuário já cadastrado, pulando registro")
         setCurrentStep(2)
+        updateUrlForStep(2)
         return
       }
 
@@ -909,8 +874,6 @@ export default function AgroDeriLanding() {
         rg: unmaskValue(userData.rg),
       }
 
-      //    console.log("📝 Dados de registro:", registrationData)
-
       try {
         const response = await fetch("https://api.agroderivative.tech/api/users/register/", {
           method: "POST",
@@ -924,20 +887,18 @@ export default function AgroDeriLanding() {
         const result = await response.json()
 
         if (response.ok) {
-          //       console.log("✅ Usuário registrado com sucesso!", result)
           alert("Registro bem-sucedido!")
           setCurrentStep(2)
           updateUrlForStep(2)
         } else {
-          //      console.error("❌ Erro no registro:", result)
           handleRegistrationErrors(result)
         }
       } catch (error) {
-        //     console.error("🌐 Erro de rede:", error)
+        console.error("🌐 Erro de rede:", error)
         alert("Erro de conexão. Tente novamente.")
       }
     } catch (error) {
-      //    console.error("💥 Erro geral:", error)
+      console.error("💥 Erro geral:", error)
       alert("Erro inesperado. Tente novamente.")
     } finally {
       setLoading(false)
@@ -993,7 +954,7 @@ export default function AgroDeriLanding() {
 
   // Função para atualizar a URL baseada no step atual
   const updateUrlForStep = (step: number) => {
-    const stepNames = {
+    const stepNames: { [key: number]: string } = {
       0: "",
       1: "cadastro",
       2: "pagamento",
@@ -1135,18 +1096,6 @@ export default function AgroDeriLanding() {
     return AVAILABLE_CRYPTOS.slice(0, 3)
   }
 
-  const [cryptoAddress, setCryptoAddress] = useState("")
-  const [cryptoNetwork, setCryptoNetwork] = useState("")
-  const [cryptoNetworkName, setCryptoNetworkName] = useState("")
-  const [cryptoLoading, setCryptoLoading] = useState(false)
-
-  // Gerar endereço crypto quando chegar no step 2.7
-  useEffect(() => {
-    if (currentStep === 2.7 && selectedCrypto) {
-      generateCryptoAddress()
-    }
-  }, [currentStep, selectedCrypto])
-
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -1207,7 +1156,7 @@ export default function AgroDeriLanding() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="flex-1 sm:flex-none border-green-600 text-green-600 hover:bg-green-50 px-8 py-4 text-lg"
+                  className="flex-1 sm:flex-none border-green-600 text-green-600 hover:bg-green-50 px-8 py-4 text-lg bg-transparent"
                   onClick={() => setShowLoginModal(true)}
                 >
                   Acompanhar Investimento
@@ -1227,7 +1176,7 @@ export default function AgroDeriLanding() {
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
-                    onError={(e) => {
+                    onError={(e: any) => {
                       console.log("❌ Erro ao carregar vídeo do YouTube, usando fallback")
                       e.target.style.display = "none"
                       e.target.nextElementSibling.style.display = "flex"
@@ -1268,11 +1217,6 @@ export default function AgroDeriLanding() {
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Validação e Autoridade */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4"></div>
       </section>
 
       {/* Validação e Autoridade */}
@@ -1347,7 +1291,7 @@ export default function AgroDeriLanding() {
             <Button
               size="lg"
               variant="outline"
-              className="border-green-600 text-green-600 hover:bg-green-50"
+              className="border-green-600 text-green-600 hover:bg-green-50 bg-transparent"
               onClick={scrollToCheckout}
             >
               Quero entender como funciona
@@ -1355,7 +1299,7 @@ export default function AgroDeriLanding() {
           </div>
         </div>
       </section>
-      <section className="py-20 bg-gradient-to-br from-green-50 to emerald-100">
+      <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-100">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center space-y-6 mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-gray-900">Tá, mas como eu ganho com isso?</h2>
@@ -1668,7 +1612,7 @@ export default function AgroDeriLanding() {
                   </div>
 
                   <div className="flex gap-4 pt-4">
-                    <Button variant="outline" onClick={handleBack} className="flex-1">
+                    <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
                       Voltar
                     </Button>
                     <Button onClick={handleNext} className="flex-1" disabled={loading}>
@@ -1762,7 +1706,7 @@ export default function AgroDeriLanding() {
                                   src={crypto.icon || "/placeholder.svg"}
                                   alt={crypto.coin}
                                   className="w-6 h-6"
-                                  onError={(e) => {
+                                  onError={(e: any) => {
                                     e.target.src = "/placeholder.svg?height=24&width=24"
                                   }}
                                 />
@@ -1776,7 +1720,12 @@ export default function AgroDeriLanding() {
                         </div>
 
                         {!showAllCryptos && (
-                          <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAllCryptos(true)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 bg-transparent"
+                            onClick={() => setShowAllCryptos(true)}
+                          >
                             Ver todas as criptomoedas
                           </Button>
                         )}
@@ -1800,7 +1749,7 @@ export default function AgroDeriLanding() {
                                     src={crypto.icon || "/placeholder.svg"}
                                     alt={crypto.coin}
                                     className="w-6 h-6"
-                                    onError={(e) => {
+                                    onError={(e: any) => {
                                       e.target.src = "/placeholder.svg?height=24&width=24"
                                     }}
                                   />
@@ -1835,7 +1784,7 @@ export default function AgroDeriLanding() {
                   </div>
 
                   <div className="flex gap-4">
-                    <Button variant="outline" onClick={handleBack} className="flex-1">
+                    <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
                       Voltar
                     </Button>
                     <Button
@@ -1885,7 +1834,7 @@ export default function AgroDeriLanding() {
                             src={qrCodeUrl || "/placeholder.svg"}
                             alt="QR Code PIX"
                             className="w-full h-full object-contain border rounded-lg"
-                            onError={(e) => {
+                            onError={(e: any) => {
                               console.error("❌ Erro ao carregar QR Code:", qrCodeUrl)
                               console.error("❌ Evento de erro:", e)
                               e.target.src = "/placeholder.svg?height=256&width=256&text=Erro+ao+carregar+QR+Code"
@@ -1924,7 +1873,7 @@ export default function AgroDeriLanding() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full mt-2"
+                          className="w-full mt-2 bg-transparent"
                           onClick={copyPixCode}
                           disabled={!paymentString}
                         >
@@ -1978,7 +1927,7 @@ export default function AgroDeriLanding() {
                   </div>
 
                   <div className="flex gap-4">
-                    <Button variant="outline" onClick={handleBack} className="flex-1">
+                    <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
                       Voltar
                     </Button>
                     {paymentConfirmed ? (
@@ -2024,7 +1973,7 @@ export default function AgroDeriLanding() {
                         src={AVAILABLE_CRYPTOS.find((c) => c.coin === selectedCrypto)?.icon || "/placeholder.svg"}
                         alt={selectedCrypto}
                         className="w-8 h-8"
-                        onError={(e) => {
+                        onError={(e: any) => {
                           e.target.src = "/placeholder.svg?height=32&width=32"
                         }}
                       />
@@ -2052,7 +2001,7 @@ export default function AgroDeriLanding() {
                             src={`https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(cryptoAddress)}`}
                             alt="QR Code do endereço crypto"
                             className="w-full h-full object-contain border rounded-lg"
-                            onError={(e) => {
+                            onError={(e: any) => {
                               e.target.src = "/placeholder.svg?height=256&width=256&text=QR+Code+Indisponível"
                               e.target.style.backgroundColor = "#f3f4f6"
                             }}
@@ -2066,7 +2015,7 @@ export default function AgroDeriLanding() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full mt-2"
+                            className="w-full mt-2 bg-transparent"
                             onClick={() => {
                               navigator.clipboard.writeText(cryptoAddress)
                               alert("Endereço copiado!")
@@ -2114,7 +2063,7 @@ export default function AgroDeriLanding() {
                   </div>
 
                   <div className="flex gap-4">
-                    <Button variant="outline" onClick={handleBack} className="flex-1">
+                    <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
                       Voltar
                     </Button>
                     {paymentConfirmed ? (

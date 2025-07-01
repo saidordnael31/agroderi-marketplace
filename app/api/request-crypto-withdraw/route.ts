@@ -3,43 +3,43 @@ import { type NextRequest, NextResponse } from "next/server"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { cpf, address, coin, amount, network } = body
 
-    console.log("🪙 Dados recebidos para resgate crypto:", { cpf, address, coin, amount, network })
+    console.log("🪙 Dados recebidos no proxy de resgate crypto:", body)
 
     // Validar campos obrigatórios
-    if (!cpf || !address || !coin || !amount || !network) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Todos os campos são obrigatórios",
-          details: "CPF, endereço, moeda, valor e rede são necessários",
-        },
-        { status: 400 },
-      )
+    const { cpf, address, coin, amount, network } = body
+
+    if (!cpf) {
+      return NextResponse.json({ error: "CPF é obrigatório", field: "cpf" }, { status: 400 })
     }
 
-    // URL da API externa
+    if (!address) {
+      return NextResponse.json({ error: "Endereço da carteira é obrigatório", field: "address" }, { status: 400 })
+    }
+
+    if (!coin) {
+      return NextResponse.json({ error: "Criptomoeda é obrigatória", field: "coin" }, { status: 400 })
+    }
+
+    if (!amount || amount <= 0) {
+      return NextResponse.json({ error: "Valor deve ser maior que zero", field: "amount" }, { status: 400 })
+    }
+
+    if (!network) {
+      return NextResponse.json({ error: "Rede é obrigatória", field: "network" }, { status: 400 })
+    }
+
+    // URL do servidor externo
     const externalApiUrl = "https://api.agroderivative.tech/api/send-crypto-withdraw/"
 
     console.log("🔗 Fazendo requisição para:", externalApiUrl)
-
-    const headers = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "X-API-Key": "55211ed1-2782-4ae9-b0d1-7569adccd86d",
-    }
-
-    const data = {
-      cpf: cpf,
-      address: address,
-      coin: coin,
-      amount: Number.parseFloat(amount),
-      network: network,
-    }
-
-    console.log("📋 Dados enviados:", data)
-    console.log("📋 Headers:", headers)
+    console.log("📦 Dados enviados:", {
+      cpf,
+      address: address.substring(0, 10) + "...", // Log parcial por segurança
+      coin,
+      amount,
+      network,
+    })
 
     // Fazer a requisição para o servidor externo com timeout
     const controller = new AbortController()
@@ -48,63 +48,81 @@ export async function POST(request: NextRequest) {
     try {
       const response = await fetch(externalApiUrl, {
         method: "POST",
-        headers: headers,
-        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent": "AgroDeri-Frontend/1.0",
+        },
+        body: JSON.stringify({
+          cpf,
+          address,
+          coin,
+          amount,
+          network,
+        }),
         signal: controller.signal,
       })
 
       clearTimeout(timeoutId)
 
       console.log("📊 Status da resposta externa:", response.status)
-      console.log("📊 Headers da resposta:", Object.fromEntries(response.headers.entries()))
 
-      const responseData = await response.json()
-      console.log("📦 Dados da resposta externa completos:", JSON.stringify(responseData, null, 2))
+      // Tratar resposta 404 especificamente
+      if (response.status === 404) {
+        console.log("❌ Endpoint não encontrado (404)")
+        return NextResponse.json(
+          {
+            error: "Serviço de resgate crypto temporariamente indisponível",
+            details: "Endpoint não encontrado",
+            type: "service_unavailable",
+          },
+          { status: 503 },
+        )
+      }
 
+      const data = await response.json()
+      console.log("📦 Dados da resposta externa:", data)
+
+      // Verificar se a resposta indica sucesso
       if (response.ok) {
         console.log("✅ Resgate crypto solicitado com sucesso!")
 
         return NextResponse.json(
           {
             success: true,
-            message: "Resgate de criptomoeda solicitado com sucesso!",
-            data: responseData,
+            message: "Solicitação de resgate enviada com sucesso",
+            data: data,
+            details: {
+              coin,
+              amount,
+              network,
+              address: address.substring(0, 10) + "...", // Retornar endereço parcial por segurança
+            },
           },
           { status: 200 },
         )
-      } else if (response.status === 404) {
-        console.error("❌ Usuário não encontrado na API externa")
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Usuário não encontrado",
-            details: "CPF não encontrado no sistema",
-            type: "user_not_found",
-          },
-          { status: 404 },
-        )
       } else {
-        console.error("❌ Erro na API externa:", responseData)
+        console.log("❌ Erro na resposta da API externa:", data)
+
         return NextResponse.json(
           {
             success: false,
-            error: responseData.error || responseData.message || "Erro ao solicitar resgate crypto",
-            details: responseData,
-            type: "external_api_error",
+            error: data.error || data.message || "Erro ao processar resgate",
+            details: data,
+            type: "api_error",
           },
           { status: response.status },
         )
       }
-    } catch (fetchError) {
+    } catch (fetchError: any) {
       clearTimeout(timeoutId)
 
       if (fetchError.name === "AbortError") {
-        console.error("❌ Timeout na requisição para API externa")
+        console.log("⏰ Timeout na requisição de resgate crypto")
         return NextResponse.json(
           {
-            success: false,
-            error: "Timeout na requisição",
-            details: "A API externa não respondeu em tempo hábil",
+            error: "Timeout na solicitação de resgate",
+            details: "A requisição demorou mais que 10 segundos",
             type: "timeout_error",
           },
           { status: 408 },
@@ -113,16 +131,16 @@ export async function POST(request: NextRequest) {
 
       throw fetchError
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Erro no proxy de resgate crypto:", error)
 
-    // Retornar erro detalhado
+    // Retornar erro detalhado para debugging
     return NextResponse.json(
       {
-        success: false,
         error: "Erro interno do servidor",
         details: error.message,
-        type: "crypto_withdraw_request_error",
+        type: "proxy_error",
+        timestamp: new Date().toISOString(),
       },
       { status: 500 },
     )
