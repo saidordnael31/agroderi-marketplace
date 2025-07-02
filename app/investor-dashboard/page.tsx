@@ -90,6 +90,7 @@ export default function InvestorDashboard() {
   /* -- URL Params -- */
   const cpf = searchParams.get("cpf") ?? ""
   const token = searchParams.get("token") ?? ""
+  const userId = searchParams.get("user_id") ?? ""
 
   /* ───────────── Fetch user profile ───────────── */
   useEffect(() => {
@@ -238,6 +239,32 @@ export default function InvestorDashboard() {
       alert("Erro de conexão ao solicitar resgate crypto.")
     } finally {
       setCryptoWithdrawLoading(false)
+    }
+  }
+
+  const redirectToInvestment = () => {
+    // Preparar dados para preencher automaticamente o formulário de investimento
+    if (userProfile) {
+      window.opener?.postMessage(
+        {
+          type: "PREFILL_INVESTMENT_DATA",
+          data: {
+            name: `${userProfile.first_name} ${userProfile.last_name}`,
+            email: userProfile.email,
+            cpf: userProfile.cpf,
+            phone: userProfile.whatsapp || "",
+            rg: userProfile.rg || "",
+            user_id: userProfile.id,
+          },
+        },
+        "*",
+      )
+
+      // Focar na janela principal
+      window.opener?.focus()
+
+      // Fechar esta janela
+      window.close()
     }
   }
 
@@ -624,7 +651,10 @@ export default function InvestorDashboard() {
             <CardContent className="p-8 space-y-4">
               <div className="text-6xl">📊</div>
               <h3 className="text-xl font-semibold">Nenhum investimento encontrado</h3>
-              <p className="text-gray-600">Você ainda não possui investimentos em tokens AGD.</p>
+              <p className="text-gray-600 mb-6">Você ainda não possui investimentos em tokens AGD.</p>
+              <Button onClick={redirectToInvestment} className="bg-green-600 hover:bg-green-700 text-white">
+                Fazer Investimento
+              </Button>
             </CardContent>
           </Card>
         )}
