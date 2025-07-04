@@ -4,9 +4,10 @@ import Script from "next/script"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.dev",
+  title: "Agroderi - Investimentos em Tokens AGD",
+  description:
+    "Plataforma de investimentos em tokens AGD da Agroderi. Invista no futuro do agronegócio com segurança e rentabilidade.",
+  generator: "Agroderi",
 }
 
 export default function RootLayout({
@@ -15,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <Script
           id="gtm-script"
