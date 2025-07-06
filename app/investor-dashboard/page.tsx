@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Sprout,
   User,
   DollarSign,
   Calendar,
@@ -384,7 +383,7 @@ export default function InvestorDashboard() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sprout className="h-8 w-8 text-green-600" />
+            <img src="/images/agro-logo.png" alt="AgroDeri Logo" className="h-8 w-auto" />
             <span className="text-2xl font-bold text-gray-900">AgroDeri</span>
             <Badge variant="secondary" className="ml-2">
               Área do Investidor

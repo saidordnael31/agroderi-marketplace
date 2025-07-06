@@ -7,32 +7,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import {
-  Sprout,
   TrendingUp,
   Crown,
   CheckCircle,
   Star,
-  Gift,
-  Zap,
-  ArrowDown,
-  Shield,
-  Target,
-  Coins,
-  BarChart3,
   Loader2,
   ArrowRight,
   Clock,
-  Copy,
   Eye,
   EyeOff,
-  ArrowLeft,
+  Shield,
+  Sprout,
 } from "lucide-react"
 import { maskCPF, maskRG, maskPhone, unmaskValue } from "@/utils/input-masks"
 import { AVAILABLE_CRYPTOS } from "@/utils/crypto-list"
 import { useSearchParams } from "next/navigation"
 
 export default function AgroDeriLanding() {
-  const [showCheckout, setShowCheckout] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedPackage, setSelectedPackage] = useState("")
   const [amount, setAmount] = useState(0)
@@ -71,7 +62,6 @@ export default function AgroDeriLanding() {
   const [isPrefilledUser, setIsPrefilledUser] = useState(false)
 
   const checkoutRef = useRef<HTMLDivElement>(null)
-  const qrCodeRef = useRef<HTMLCanvasElement>(null)
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -106,7 +96,7 @@ export default function AgroDeriLanding() {
       vesting: 12,
       bonus: "5% em AGD",
       features: ["Tokens AGD proporcionais", "Grupo WhatsApp oficial", "Alertas de mercado", "Campanhas da comunidade"],
-      color: "green",
+      color: "blue",
     },
     {
       id: "plus",
@@ -196,7 +186,7 @@ export default function AgroDeriLanding() {
     },
   ]
 
-  const steps = ["Pacote", "Dados", "PIX", "Confirmação"]
+  const steps = ["Pacote", "Dados", "Pagamento", "Confirmação"]
 
   // Gerar QR Code PIX real quando chegar no step 2.5
   useEffect(() => {
@@ -212,13 +202,11 @@ export default function AgroDeriLanding() {
     }
   }, [currentStep, selectedCrypto])
 
-  // Detectar step da URL e abrir checkout automaticamente
+  // Detectar step da URL
   useEffect(() => {
     const stepParam = searchParams?.get("step")
 
     if (stepParam) {
-      setShowCheckout(true)
-
       // Mapear os steps da URL para os números internos
       switch (stepParam) {
         case "cadastro":
@@ -233,15 +221,10 @@ export default function AgroDeriLanding() {
         default:
           setCurrentStep(0)
       }
-
-      // Scroll para o checkout após um pequeno delay
-      setTimeout(() => {
-        checkoutRef.current?.scrollIntoView({ behavior: "smooth" })
-      }, 100)
     }
   }, [searchParams])
 
-  // Adicionar useEffect para detectar mobile
+  // Detectar mobile
   useEffect(() => {
     const checkMobile = () => {
       const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
@@ -258,22 +241,18 @@ export default function AgroDeriLanding() {
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
-  // Adicionar useEffect para verificar retorno do localStorage
+  // Verificar retorno do localStorage
   useEffect(() => {
-    // Verificar se o usuário está retornando da área do investidor
     const returnUrl = localStorage.getItem("agroDeriReturnUrl")
     const userData = localStorage.getItem("agroDeriUserData")
 
     if (returnUrl && userData) {
       try {
         const user = JSON.parse(userData)
-
-        // Mostrar mensagem de boas-vindas de volta
         setTimeout(() => {
           alert(`Olá novamente, ${user.name}! Você retornou da área do investidor.`)
         }, 1000)
 
-        // Limpar dados salvos
         localStorage.removeItem("agroDeriReturnUrl")
         localStorage.removeItem("agroDeriUserData")
       } catch (error) {
@@ -282,36 +261,30 @@ export default function AgroDeriLanding() {
     }
   }, [])
 
-  // Adicionar após os useEffects existentes
+  // Listener para mensagens de pré-preenchimento
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === "PREFILL_INVESTMENT_DATA") {
         const data = event.data.data
 
-        // Marcar como usuário pré-cadastrado
         setIsPrefilledUser(true)
 
-        // Pré-preencher os dados do usuário
         setUserData({
           name: data.name || "",
           email: data.email || "",
           phone: data.phone || "",
           cpf: data.cpf || "",
           rg: data.rg || "",
-          password: "", // Não precisamos da senha pois já está cadastrado
-          confirmPassword: "", // Não precisamos da senha pois já está cadastrado
+          password: "",
+          confirmPassword: "",
         })
 
-        // Mostrar o checkout e ir direto para seleção de pacote
-        setShowCheckout(true)
         setCurrentStep(0)
 
-        // Scroll para o checkout
         setTimeout(() => {
           checkoutRef.current?.scrollIntoView({ behavior: "smooth" })
         }, 100)
 
-        // Mostrar mensagem de boas-vindas
         alert(`Bem-vindo de volta, ${data.name}! Seus dados foram pré-preenchidos. Escolha seu pacote de investimento.`)
       }
     }
@@ -323,7 +296,6 @@ export default function AgroDeriLanding() {
     }
   }, [])
 
-  // Modificar a função createContractDocument para usar a nova API
   const createContractDocument = async () => {
     try {
       setLoading(true)
@@ -345,7 +317,6 @@ export default function AgroDeriLanding() {
         setContractCreated(true)
         setContractData(result.contract)
 
-        // Extrair IDs importantes da nova resposta
         if (result.contract) {
           if (result.contract.document_id) {
             setDocumentIdClicksign(result.contract.document_id)
@@ -393,16 +364,13 @@ export default function AgroDeriLanding() {
         console.log("✅ Pagamento confirmado!")
         setPaymentConfirmed(true)
 
-        // Criar documento de contrato
         const contractSuccess = await createContractDocument()
 
         if (contractSuccess) {
-          // Avançar para tela de confirmação
           setCurrentStep(3)
           updateUrlForStep(3)
         }
       } else if (result.success && result.data) {
-        // Verificar se é pagamento crypto
         if (paymentMethod === "crypto") {
           const depositCryptoValue = result.data.deposit_crypto_value
           const depositCryptoName = result.data.deposit_crypto_name
@@ -411,7 +379,6 @@ export default function AgroDeriLanding() {
           console.log("- deposit_crypto_value:", depositCryptoValue)
           console.log("- deposit_crypto_name:", depositCryptoName)
 
-          // Verificar se ambos os campos têm valores válidos
           if (
             depositCryptoValue &&
             depositCryptoName &&
@@ -426,11 +393,9 @@ export default function AgroDeriLanding() {
 
             setPaymentConfirmed(true)
 
-            // Criar documento de contrato
             const contractSuccess = await createContractDocument()
 
             if (contractSuccess) {
-              // Avançar para tela de confirmação
               setCurrentStep(3)
               updateUrlForStep(3)
             }
@@ -441,18 +406,15 @@ export default function AgroDeriLanding() {
             )
           }
         } else {
-          // Verificar pagamento PIX (lógica original)
           const depositValue = result.data.deposit_value
 
           if (depositValue && Number.parseFloat(depositValue) > 0) {
             console.log("✅ Pagamento PIX confirmado!")
             setPaymentConfirmed(true)
 
-            // Criar documento de contrato
             const contractSuccess = await createContractDocument()
 
             if (contractSuccess) {
-              // Avançar para tela de confirmação
               setCurrentStep(3)
               updateUrlForStep(3)
             }
@@ -495,22 +457,18 @@ export default function AgroDeriLanding() {
       const result = await response.json()
 
       if (response.ok && result.success) {
-        // Verificar se temos QR Code
         if (result.qrCode) {
           setQrCodeUrl(result.qrCode)
         } else {
           generateFallbackPixCode()
         }
 
-        // Verificar se temos Payment String
         if (result.paymentString) {
           setPaymentString(result.paymentString)
         } else {
-          // Usar dados originais se disponível
           if (result.originalData) {
             const originalData = result.originalData
 
-            // Tentar diferentes campos possíveis
             const possibleQrFields = ["qrCode", "qr_code", "qr", "qrcode"]
             const possibleStringFields = ["paymentString", "payment_string", "pix_code", "code", "pix"]
 
@@ -529,7 +487,6 @@ export default function AgroDeriLanding() {
             }
           }
 
-          // Se ainda não temos dados, usar fallback
           if (!paymentString) {
             generateFallbackPixCode()
           }
@@ -549,22 +506,18 @@ export default function AgroDeriLanding() {
   }
 
   const generateFallbackPixCode = () => {
-    // PIX simulado como fallback
     const pixCodeGenerated = `00020126580014br.gov.bcb.pix0136${userData.email.replace("@", "").replace(".", "")}520400005303986540${amount.toFixed(2)}5802BR5925AGRODERI TECNOLOGIA LTDA6009SAO PAULO62070503***6304ABCD`
     setPaymentString(pixCodeGenerated)
 
-    // Gerar QR Code usando API externa
     const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(pixCodeGenerated)}`
     setQrCodeUrl(qrCodeApiUrl)
   }
 
-  // Atualizar a função generateCryptoAddress para usar a API route local
   const generateCryptoAddress = async () => {
     try {
       setCryptoLoading(true)
       console.log("🔄 Gerando endereço crypto para:", selectedCrypto)
 
-      // Usar a API route local ao invés da requisição direta
       const response = await fetch("/api/generate-crypto-address/", {
         method: "POST",
         headers: {
@@ -604,13 +557,6 @@ export default function AgroDeriLanding() {
     } catch (err) {
       alert("Erro ao copiar código PIX")
     }
-  }
-
-  const scrollToCheckout = () => {
-    setShowCheckout(true)
-    setTimeout(() => {
-      checkoutRef.current?.scrollIntoView({ behavior: "smooth" })
-    }, 100)
   }
 
   const handlePackageSelect = (pkg: any) => {
@@ -653,18 +599,15 @@ export default function AgroDeriLanding() {
   }
 
   const validatePassword = (password: string) => {
-    // Permitir letras, números e caracteres especiais
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
     return passwordRegex.test(password)
   }
 
-  // Adicionar função de login após as funções existentes:
   const handleLogin = async () => {
     try {
       setLoginLoading(true)
       setLoginErrors({ username: "", password: "", general: "" })
 
-      // Validação básica
       const errors = { username: "", password: "", general: "" }
 
       if (!loginData.username.trim()) {
@@ -697,24 +640,18 @@ export default function AgroDeriLanding() {
       const result = await response.json()
 
       if (response.ok) {
-        // Fechar modal
         setShowLoginModal(false)
 
-        // URL da área do investidor
         const investorUrl = `/investor-dashboard?token=${result.token}&user=${encodeURIComponent(loginData.username)}&cpf=${result.cpf}&user_id=${result.user_id}`
 
-        // Estratégia diferente para mobile
         if (isMobile) {
           console.log("📱 Dispositivo móvel detectado, usando redirecionamento direto")
 
-          // Tentar window.open primeiro
           const newWindow = window.open(investorUrl, "_blank")
 
-          // Se falhar (bloqueado), usar redirecionamento na mesma aba
           if (!newWindow || newWindow.closed || typeof newWindow.closed == "undefined") {
             console.log("🚫 Pop-up bloqueado, redirecionando na mesma aba")
 
-            // Mostrar confirmação antes de redirecionar
             const confirmRedirect = confirm(
               `Olá ${result.first_name || loginData.username}!\n\n` +
                 "Você será redirecionado para sua área do investidor. " +
@@ -723,7 +660,6 @@ export default function AgroDeriLanding() {
             )
 
             if (confirmRedirect) {
-              // Salvar dados no localStorage para possível retorno
               localStorage.setItem("agroDeriReturnUrl", window.location.href)
               localStorage.setItem(
                 "agroDeriUserData",
@@ -733,18 +669,15 @@ export default function AgroDeriLanding() {
                 }),
               )
 
-              // Redirecionar na mesma aba
               window.location.href = investorUrl
             }
           } else {
             console.log("✅ Nova aba aberta com sucesso")
-            // Mostrar mensagem de sucesso
             alert(
               `Bem-vindo, ${result.first_name || loginData.username}! Sua área do investidor foi aberta em uma nova aba.`,
             )
           }
         } else {
-          // Desktop - usar nova aba normalmente
           const newWindow = window.open(investorUrl, "_blank")
 
           if (!newWindow) {
@@ -756,10 +689,8 @@ export default function AgroDeriLanding() {
           }
         }
 
-        // Limpar dados do formulário
         setLoginData({ username: "", password: "" })
       } else {
-        // Tratar diferentes tipos de erro
         if (result.non_field_errors) {
           setLoginErrors({
             ...errors,
@@ -806,7 +737,6 @@ export default function AgroDeriLanding() {
       errors.email = "E-mail inválido"
     }
 
-    // Só validar senha se não for usuário pré-cadastrado
     if (!isPrefilledUser) {
       if (!userData.password.trim()) {
         errors.password = "Senha é obrigatória"
@@ -851,7 +781,6 @@ export default function AgroDeriLanding() {
     try {
       setLoading(true)
 
-      // Se é usuário pré-cadastrado, pular registro
       if (isPrefilledUser) {
         setCurrentStep(2)
         updateUrlForStep(2)
@@ -952,7 +881,6 @@ export default function AgroDeriLanding() {
     setFormErrors(backendErrors)
   }
 
-  // Função para atualizar a URL baseada no step atual
   const updateUrlForStep = (step: number) => {
     const stepNames: { [key: number]: string } = {
       0: "",
@@ -989,7 +917,6 @@ export default function AgroDeriLanding() {
 
   const handleBack = () => {
     if (currentStep === 1) {
-      // Se estiver no step 1 (Dados), voltar para step 0 (Pacotes) e resetar
       resetCheckout()
       updateUrlForStep(0)
     } else if (currentStep > 0) {
@@ -1004,10 +931,10 @@ export default function AgroDeriLanding() {
     setTimeout(() => {
       setLoading(false)
       if (paymentMethod === "pix") {
-        setCurrentStep(2.5) // PIX QR Code
+        setCurrentStep(2.5)
         updateUrlForStep(2.5)
       } else if (paymentMethod === "crypto") {
-        setCurrentStep(2.7) // Crypto Address
+        setCurrentStep(2.7)
         updateUrlForStep(2.7)
       }
     }, 2000)
@@ -1075,8 +1002,7 @@ export default function AgroDeriLanding() {
   }
 
   const getPackageIcon = (color: string) => {
-    if (color === "green") return <Sprout className="h-8 w-8" />
-    if (color === "blue") return <Gift className="h-8 w-8" />
+    if (color === "blue") return <Sprout className="h-8 w-8" />
     if (color === "yellow") return <Crown className="h-8 w-8" />
     if (color === "purple") return <Star className="h-8 w-8" />
     if (color === "indigo") return <TrendingUp className="h-8 w-8" />
@@ -1084,8 +1010,7 @@ export default function AgroDeriLanding() {
   }
 
   const getColorClass = (color: string) => {
-    if (color === "green") return "border-green-200 bg-green-50 text-green-600"
-    if (color === "blue") return "border-blue-200 bg-blue-50 text-blue-600"
+    if (color === "blue") return "border-blue-200 bg-blue-50 text-[#202d3d]"
     if (color === "yellow") return "border-yellow-200 bg-yellow-50 text-yellow-600"
     if (color === "purple") return "border-purple-200 bg-purple-50 text-purple-600"
     if (color === "indigo") return "border-indigo-200 bg-indigo-50 text-indigo-600"
@@ -1102,596 +1027,392 @@ export default function AgroDeriLanding() {
       <header className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sprout className="h-8 w-8 text-green-600" />
-            <span className="text-2xl font-bold text-gray-900">AgroDeri</span>
+            <img src="/images/agro-logo.png" alt="AgroDeri Logo" className="h-10 w-auto" />
           </div>
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
-            Pré-venda Ativa
-          </Badge>
+          <div className="flex items-center gap-4">
+            <Badge variant="secondary" className="bg-[#a1d5df] text-[#202d3d] border-[#a1d5df]">
+              Pré-venda Ativa
+            </Badge>
+            <Button
+              size="lg"
+              className="bg-[#202d3d] hover:bg-[#1a2530] text-white px-6 py-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              onClick={() => setShowLoginModal(true)}
+            >
+              🔐 Acompanhar Investimento
+            </Button>
+          </div>
         </div>
       </header>
 
-      {/* Hero Section com VSL */}
-      <section className="bg-gradient-to-br from-green-50 to-emerald-100 py-20">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                  Você nunca ouviu isso no agro.
-                </h1>
-                <p className="text-xl text-gray-600 leading-relaxed">
-                  Um homem simples, um celular de botão, 12 toneladas de milho vendidas por USDT em segundos.
-                  <br />
-                  <span className="font-semibold text-green-600">
-                    Isso não é promessa, é tecnologia. É agro real tokenizado.
-                  </span>
-                </p>
-              </div>
+      {/* Checkout Section */}
+      <section ref={checkoutRef} className="py-20 bg-white">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h1 className="text-3xl lg:text-5xl font-bold text-gray-900 mb-4">Investir em Tokens AGD</h1>
+            <p className="text-xl text-gray-600">Escolha seu pacote e comece a investir no futuro do agronegócio</p>
+          </div>
 
-              <div className="space-y-4">
-                {[
-                  "Acesso a soja, milho, petróleo e café com R$50",
-                  "Token AGD com utilidade real, rastreável e líquido",
-                  "Pré-venda exclusiva com 6% do supply disponível",
-                  "Estrutura auditável, transparente e segura",
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Na seção Hero, substituir o botão único por dois botões lado a lado: */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  size="lg"
-                  className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-4 sm:px-8 py-3 sm:py-4 text-base sm:text-lg"
-                  onClick={scrollToCheckout}
+          {/* Progress Steps */}
+          <div className="flex items-center justify-between mb-8">
+            {steps.map((step, index) => (
+              <div key={index} className="flex items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    index <= currentStep ? "bg-[#202d3d] text-white" : "bg-gray-200 text-gray-600"
+                  }`}
                 >
-                  <span className="hidden sm:inline">Quero meus tokens AGD agora</span>
-                  <span className="sm:hidden">Quero tokens AGD</span>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="flex-1 sm:flex-none border-green-600 text-green-600 hover:bg-green-50 px-8 py-4 text-lg bg-transparent"
-                  onClick={() => setShowLoginModal(true)}
-                >
-                  Acompanhar Investimento
-                </Button>
-              </div>
-            </div>
-
-            {/* Hero Video */}
-            <div className="relative">
-              <div className="bg-black rounded-2xl overflow-hidden shadow-2xl">
-                <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative">
-                  {/* YouTube Shorts embed */}
-                  <iframe
-                    className="w-full h-full object-cover"
-                    src="https://www.youtube.com/embed/pOBBDE43vhM"
-                    title="AgroDeri - A Revolução do Agro Tokenizado"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    onError={(e: any) => {
-                      console.log("❌ Erro ao carregar vídeo do YouTube, usando fallback")
-                      e.target.style.display = "none"
-                      e.target.nextElementSibling.style.display = "flex"
-                    }}
-                  />
-
-                  {/* Fallback quando o YouTube não carrega */}
-                  <div
-                    className="w-full h-full bg-gradient-to-br from-green-800 to-green-900 flex items-center justify-center absolute inset-0"
-                    style={{ display: "none" }}
-                  >
-                    <div className="text-center text-white">
-                      <div className="text-6xl mb-4">🎥</div>
-                      <h3 className="text-2xl font-bold mb-2">A Revolução do Agro Tokenizado</h3>
-                      <p className="text-lg opacity-90 mb-4">Veja como a tecnologia está transformando o agronegócio</p>
-                      <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 max-w-md mx-auto">
-                        <p className="text-sm">
-                          🌱 Commodities reais tokenizadas
-                          <br />💰 Acesso democrático ao agro
-                          <br />🔗 Blockchain transparente
-                          <br />📈 Liquidez instantânea
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => window.open("https://www.youtube.com/shorts/pOBBDE43vhM", "_blank")}
-                        className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-                      >
-                        Assistir no YouTube
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="absolute bottom-4 left-4 text-white text-sm bg-black/50 px-2 py-1 rounded">
-                    🎥 A revolução do agro tokenizado
-                  </div>
+                  {index < currentStep ? <CheckCircle className="h-4 w-4" /> : index + 1}
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Validação e Autoridade */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center space-y-6 mb-16">
-            <h2 className="text-3xl lg:text-5xl font-bold text-gray-900">
-              A revolução do agro não é teórica. Ela já começou.
-            </h2>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto">
-              O AgroDeri nasceu com base no que movimenta a economia de verdade — commodities reais.
-              <br />E conta com o apoio dos maiores nomes da tecnologia e do agro.
-            </p>
-          </div>
-
-          {/* Logos dos Parceiros */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 mb-16 opacity-60">
-            {["Google for Startups", "Nubank", "GEM NY", "BID Invest", "Cubo Itaú"].map((partner) => (
-              <div key={partner} className="bg-gray-100 rounded-lg p-6 flex items-center justify-center">
-                <span className="text-gray-600 font-semibold text-sm">{partner}</span>
+                <span className={`ml-2 text-sm ${index <= currentStep ? "text-[#202d3d]" : "text-gray-500"}`}>
+                  {step}
+                </span>
+                {index < steps.length - 1 && (
+                  <div className={`w-16 h-0.5 mx-4 ${index < currentStep ? "bg-[#202d3d]" : "bg-gray-200"}`} />
+                )}
               </div>
             ))}
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
-            {/* Coluna 1 */}
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Validação Completa</h3>
-              <div className="space-y-4">
-                {[
-                  "Tecnologia validada por especialistas em cripto e agro",
-                  "Operação registrada e auditável",
-                  "Tokens com rastreabilidade completa",
-                  "Equipe com histórico de bilhões em operações agroindustriais",
-                  "Conformidade com CVM e Banco Central",
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-3">
-                    <Shield className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-gray-700">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Coluna 2 */}
-            <div className="bg-gray-50 rounded-2xl p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Comparativo</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm font-semibold text-gray-600 border-b pb-2">
-                  <span>Agro Tradicional</span>
-                  <span>AgroDeri</span>
-                </div>
-                {[
-                  ["Acesso só pra poucos", "Aberto a todos com R$50"],
-                  ["Intermediários caros", "Liquidez direta"],
-                  ["Sem rastreabilidade", "100% auditável na blockchain"],
-                  ["Dependente de bancos", "Wallet própria, USDT e BTC"],
-                ].map(([traditional, agroderi]) => (
-                  <div
-                    key={traditional}
-                    className="grid grid-cols-2 gap-4 text-sm py-2 border-b border-gray-200 last:border-0"
-                  >
-                    <span className="text-red-600">❌ {traditional}</span>
-                    <span className="text-green-600">✅ {agroderi}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center mt-12">
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-green-600 text-green-600 hover:bg-green-50 bg-transparent"
-              onClick={scrollToCheckout}
-            >
-              Quero entender como funciona
-            </Button>
-          </div>
-        </div>
-      </section>
-      <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-100">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center space-y-6 mb-16">
-            <h2 className="text-3xl lg:text-5xl font-bold text-gray-900">Tá, mas como eu ganho com isso?</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Você compra AGD. Ele é a chave de entrada para participar de uma nova economia, conectada à realidade do
-              agro.
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-4 gap-8 mb-12">
-            {[
-              {
-                step: "1️⃣",
-                icon: <Coins className="h-8 w-8" />,
-                title: "Compre AGD",
-                description: "Com Pix, USDT ou Cartão",
-              },
-              {
-                step: "2️⃣",
-                icon: <Target className="h-8 w-8" />,
-                title: "Escolha exposição",
-                description: "Soja, milho, café, petróleo",
-              },
-              {
-                step: "3️⃣",
-                icon: <Zap className="h-8 w-8" />,
-                title: "Use tokens",
-                description: "Staking, missões, descontos",
-              },
-              {
-                step: "4️⃣",
-                icon: <BarChart3 className="h-8 w-8" />,
-                title: "Receba seus resultados",
-                description: "Bônus e benefícios",
-              },
-            ].map((item, index) => (
-              <Card key={index} className="text-center bg-white shadow-lg hover:shadow-xl transition-shadow">
-                <CardHeader>
-                  <div className="mx-auto mb-4 p-4 bg-green-100 rounded-full w-fit text-green-600">{item.icon}</div>
-                  <div className="text-3xl font-bold text-green-600 mb-2">{item.step}</div>
-                  <CardTitle className="text-xl">{item.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">{item.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-2xl p-8 text-center shadow-lg">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Extra</h3>
-            <p className="text-lg text-gray-600 mb-6">
-              Tudo rastreado. Tudo transparente. Você acompanha cada passo com dados reais do agro.
-            </p>
-            <Button
-              size="lg"
-              className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-8 py-4 text-base sm:text-lg w-full sm:w-auto"
-              onClick={scrollToCheckout}
-            >
-              <span className="hidden sm:inline">Quero garantir meus primeiros tokens</span>
-              <span className="sm:hidden">Quero meus tokens AGD</span>
-              <ArrowDown className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
-          </div>
-        </div>
-      </section>
-      {showCheckout && (
-        <section ref={checkoutRef} className="py-20 bg-white">
-          <div className="max-w-4xl mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl lg:text-5xl font-bold text-gray-900 mb-4">Escolha seu Pacote AGD</h2>
-              <p className="text-xl text-gray-600">Diferentes formas de participar da revolução do agro tokenizado</p>
-            </div>
-
-            {/* Progress Steps */}
-            <div className="flex items-center justify-between mb-8">
-              {steps.map((step, index) => (
-                <div key={index} className="flex items-center">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      index <= currentStep ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
-                    }`}
-                  >
-                    {index < currentStep ? <CheckCircle className="h-4 w-4" /> : index + 1}
-                  </div>
-                  <span className={`ml-2 text-sm ${index <= currentStep ? "text-green-600" : "text-gray-500"}`}>
-                    {step}
-                  </span>
-                  {index < steps.length - 1 && (
-                    <div className={`w-16 h-0.5 mx-4 ${index < currentStep ? "bg-green-600" : "bg-gray-200"}`} />
+          {/* Step 0: Escolha do Pacote */}
+          {currentStep === 0 && (
+            <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {packages.map((pkg) => (
+                <Card
+                  key={pkg.id}
+                  className={`relative ${pkg.popular ? "ring-2 ring-[#202d3d] scale-105" : ""} hover:shadow-lg transition-all`}
+                >
+                  {pkg.popular && (
+                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#202d3d]">
+                      Mais Popular
+                    </Badge>
                   )}
-                </div>
+                  <CardHeader className="text-center">
+                    <div className={`mx-auto mb-4 p-3 rounded-full w-fit ${getColorClass(pkg.color)}`}>
+                      {getPackageIcon(pkg.color)}
+                    </div>
+                    <CardTitle className="text-xl">{pkg.name}</CardTitle>
+                    <div className="text-2xl font-bold text-gray-900">
+                      R$ {pkg.minValue.toLocaleString()} - R$ {pkg.maxValue.toLocaleString()}
+                    </div>
+                    <CardDescription className="text-[#202d3d] font-semibold">{pkg.bonus}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <span>Cliff: {pkg.cliff}m</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-gray-500" />
+                        <span>Vesting: {pkg.vesting}m</span>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-2">
+                      {pkg.features.map((feature, index) => (
+                        <li key={index} className="flex items-start gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-[#202d3d] mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Button className="w-full bg-[#202d3d] hover:bg-[#1a2530]" onClick={() => handlePackageSelect(pkg)}>
+                      Escolher este pacote
+                    </Button>
+                  </CardContent>
+                </Card>
               ))}
             </div>
+          )}
 
-            {/* Step 0: Escolha do Pacote */}
-            {currentStep === 0 && (
-              <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {packages.map((pkg) => (
-                  <Card
-                    key={pkg.id}
-                    className={`relative ${pkg.popular ? "ring-2 ring-blue-500 scale-105" : ""} hover:shadow-lg transition-all`}
-                  >
-                    {pkg.popular && (
-                      <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600">
-                        Mais Popular
-                      </Badge>
-                    )}
-                    <CardHeader className="text-center">
-                      <div className={`mx-auto mb-4 p-3 rounded-full w-fit ${getColorClass(pkg.color)}`}>
-                        {getPackageIcon(pkg.color)}
-                      </div>
-                      <CardTitle className="text-xl">{pkg.name}</CardTitle>
-                      <div className="text-2xl font-bold text-gray-900">
-                        R$ {pkg.minValue.toLocaleString()} - R$ {pkg.maxValue.toLocaleString()}
-                      </div>
-                      <CardDescription className="text-green-600 font-semibold">{pkg.bonus}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-500" />
-                          <span>Cliff: {pkg.cliff}m</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-gray-500" />
-                          <span>Vesting: {pkg.vesting}m</span>
-                        </div>
-                      </div>
-
-                      <ul className="space-y-2">
-                        {pkg.features.map((feature, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm">
-                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      <Button className="w-full" onClick={() => handlePackageSelect(pkg)}>
-                        Escolher este pacote
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {/* Step 1: Dados Pessoais */}
-            {currentStep === 1 && (
-              <Card className="max-w-2xl mx-auto">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Dados Pessoais</CardTitle>
-                  <CardDescription>
-                    Preencha seus dados para continuar. Campos marcados com * são obrigatórios.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Nome completo *</Label>
-                      <Input
-                        id="name"
-                        placeholder="Seu nome completo"
-                        value={userData.name}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
-                        className={formErrors.name ? "border-red-500" : ""}
-                      />
-                      {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
-                    </div>
-                    <div>
-                      <Label htmlFor="cpf">CPF *</Label>
-                      <Input
-                        id="cpf"
-                        placeholder="000.000.000-00"
-                        value={userData.cpf}
-                        onChange={(e) => handleInputChange("cpf", e.target.value)}
-                        className={formErrors.cpf ? "border-red-500" : ""}
-                      />
-                      {formErrors.cpf && <p className="text-red-500 text-sm mt-1">{formErrors.cpf}</p>}
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="rg">RG *</Label>
-                      <Input
-                        id="rg"
-                        placeholder="00.000.000-0"
-                        value={userData.rg}
-                        onChange={(e) => handleInputChange("rg", e.target.value)}
-                        className={formErrors.rg ? "border-red-500" : ""}
-                      />
-                      {formErrors.rg && <p className="text-red-500 text-sm mt-1">{formErrors.rg}</p>}
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">WhatsApp *</Label>
-                      <Input
-                        id="phone"
-                        placeholder="(11) 99999-9999"
-                        value={userData.phone}
-                        onChange={(e) => handleInputChange("phone", e.target.value)}
-                        className={formErrors.phone ? "border-red-500" : ""}
-                      />
-                      {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
-                    </div>
-                  </div>
-
+          {/* Step 1: Dados Pessoais */}
+          {currentStep === 1 && (
+            <Card className="max-w-2xl mx-auto">
+              <CardHeader>
+                <CardTitle className="text-2xl">Dados Pessoais</CardTitle>
+                <CardDescription>
+                  Preencha seus dados para continuar. Campos marcados com * são obrigatórios.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="email">E-mail *</Label>
+                    <Label htmlFor="name">Nome completo *</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={userData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      className={formErrors.email ? "border-red-500" : ""}
+                      id="name"
+                      placeholder="Seu nome completo"
+                      value={userData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      className={formErrors.name ? "border-red-500" : ""}
                     />
-                    {formErrors.email && <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>}
+                    {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
                   </div>
+                  <div>
+                    <Label htmlFor="cpf">CPF *</Label>
+                    <Input
+                      id="cpf"
+                      placeholder="000.000.000-00"
+                      value={userData.cpf}
+                      onChange={(e) => handleInputChange("cpf", e.target.value)}
+                      className={formErrors.cpf ? "border-red-500" : ""}
+                    />
+                    {formErrors.cpf && <p className="text-red-500 text-sm mt-1">{formErrors.cpf}</p>}
+                  </div>
+                </div>
 
-                  {/* Só mostrar campos de senha se não for usuário pré-cadastrado */}
-                  {isPrefilledUser ? (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
-                          <span className="text-white text-xs">ℹ️</span>
-                        </div>
-                        <div className="text-sm">
-                          <p className="font-medium text-blue-800 mb-1">Usuário já cadastrado</p>
-                          <p className="text-blue-700">
-                            Seus dados foram pré-preenchidos. Verifique as informações e prossiga com seu investimento.
-                          </p>
-                        </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="rg">RG *</Label>
+                    <Input
+                      id="rg"
+                      placeholder="00.000.000-0"
+                      value={userData.rg}
+                      onChange={(e) => handleInputChange("rg", e.target.value)}
+                      className={formErrors.rg ? "border-red-500" : ""}
+                    />
+                    {formErrors.rg && <p className="text-red-500 text-sm mt-1">{formErrors.rg}</p>}
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">WhatsApp *</Label>
+                    <Input
+                      id="phone"
+                      placeholder="(11) 99999-9999"
+                      value={userData.phone}
+                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                      className={formErrors.phone ? "border-red-500" : ""}
+                    />
+                    {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="email">E-mail *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={userData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    className={formErrors.email ? "border-red-500" : ""}
+                  />
+                  {formErrors.email && <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>}
+                </div>
+
+                {/* Só mostrar campos de senha se não for usuário pré-cadastrado */}
+                {isPrefilledUser ? (
+                  <div className="bg-[#a1d5df] border border-[#a1d5df] rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 bg-[#202d3d] rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">ℹ️</span>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="password">Senha *</Label>
-                        <div className="relative">
-                          <Input
-                            id="password"
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Sua senha"
-                            value={userData.password}
-                            onChange={(e) => handleInputChange("password", e.target.value)}
-                            className={`pr-10 ${formErrors.password ? "border-red-500" : ""}`}
-                          />
-                          <button
-                            type="button"
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                            ) : (
-                              <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                            )}
-                          </button>
-                        </div>
-                        {formErrors.password && <p className="text-red-500 text-sm mt-1">{formErrors.password}</p>}
-                        <p className="text-xs text-gray-500 mt-1">
-                          Mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número
+                      <div className="text-sm">
+                        <p className="font-medium text-[#202d3d] mb-1">Usuário já cadastrado</p>
+                        <p className="text-[#202d3d]">
+                          Seus dados foram pré-preenchidos. Verifique as informações e prossiga com seu investimento.
                         </p>
                       </div>
-                      <div>
-                        <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
-                        <div className="relative">
-                          <Input
-                            id="confirmPassword"
-                            type={showConfirmPassword ? "text" : "password"}
-                            placeholder="Confirme sua senha"
-                            value={userData.confirmPassword}
-                            onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                            className={`pr-10 ${formErrors.confirmPassword ? "border-red-500" : ""}`}
-                          />
-                          <button
-                            type="button"
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          >
-                            {showConfirmPassword ? (
-                              <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                            ) : (
-                              <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                            )}
-                          </button>
-                        </div>
-                        {formErrors.confirmPassword && (
-                          <p className="text-red-500 text-sm mt-1">{formErrors.confirmPassword}</p>
-                        )}
-                      </div>
                     </div>
-                  )}
-
-                  <div>
-                    <Label htmlFor="amount">Valor do Investimento *</Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      placeholder="Digite o valor"
-                      value={amount}
-                      onChange={(e) => setAmount(Number(e.target.value))}
-                      className={formErrors.amount ? "border-red-500" : ""}
-                      min="50"
-                    />
-                    {formErrors.amount && <p className="text-red-500 text-sm mt-1">{formErrors.amount}</p>}
-                    <p className="text-sm text-gray-500 mt-1">Valor mínimo: R$ 50</p>
                   </div>
-
-                  <div className="flex gap-4 pt-4">
-                    <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
-                      Voltar
-                    </Button>
-                    <Button onClick={handleNext} className="flex-1" disabled={loading}>
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {isPrefilledUser ? "Validando..." : "Criando conta..."}
-                        </>
-                      ) : (
-                        <>
-                          Continuar
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 2: Método de Pagamento */}
-            {currentStep === 2 && (
-              <Card className="max-w-2xl mx-auto">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Método de Pagamento</CardTitle>
-                  <CardDescription>Total: R$ {amount.toLocaleString()}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Seleção do método de pagamento */}
-                  <div className="space-y-4">
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-base font-medium">Escolha o método de pagamento:</Label>
-                      <div className="grid grid-cols-1 gap-3 mt-3">
-                        <div
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                            paymentMethod === "pix"
-                              ? "border-green-500 bg-green-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                          onClick={() => setPaymentMethod("pix")}
+                      <Label htmlFor="password">Senha *</Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Sua senha"
+                          value={userData.password}
+                          onChange={(e) => handleInputChange("password", e.target.value)}
+                          className={`pr-10 ${formErrors.password ? "border-red-500" : ""}`}
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          onClick={() => setShowPassword(!showPassword)}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full border-2 border-green-500 flex items-center justify-center">
-                              {paymentMethod === "pix" && <div className="w-3 h-3 bg-green-500 rounded-full" />}
-                            </div>
-                            <div>
-                              <p className="font-medium">PIX</p>
-                              <p className="text-sm text-gray-600">Pagamento instantâneo</p>
-                            </div>
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                          )}
+                        </button>
+                      </div>
+                      {formErrors.password && <p className="text-red-500 text-sm mt-1">{formErrors.password}</p>}
+                      <p className="text-xs text-gray-500 mt-1">
+                        Mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirme sua senha"
+                          value={userData.confirmPassword}
+                          onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                          className={`pr-10 ${formErrors.confirmPassword ? "border-red-500" : ""}`}
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                          )}
+                        </button>
+                      </div>
+                      {formErrors.confirmPassword && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors.confirmPassword}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="amount">Valor do Investimento *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="Digite o valor"
+                    value={amount}
+                    onChange={(e) => setAmount(Number(e.target.value))}
+                    className={formErrors.amount ? "border-red-500" : ""}
+                    min="50"
+                  />
+                  {formErrors.amount && <p className="text-red-500 text-sm mt-1">{formErrors.amount}</p>}
+                  <p className="text-sm text-gray-500 mt-1">Valor mínimo: R$ 50</p>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
+                    Voltar
+                  </Button>
+                  <Button onClick={handleNext} className="flex-1 bg-[#202d3d] hover:bg-[#1a2530]" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {isPrefilledUser ? "Validando..." : "Criando conta..."}
+                      </>
+                    ) : (
+                      <>
+                        Continuar
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 2: Método de Pagamento */}
+          {currentStep === 2 && (
+            <Card className="max-w-2xl mx-auto">
+              <CardHeader>
+                <CardTitle className="text-2xl">Método de Pagamento</CardTitle>
+                <CardDescription>Total: R$ {amount.toLocaleString()}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Seleção do método de pagamento */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-medium">Escolha o método de pagamento:</Label>
+                    <div className="grid grid-cols-1 gap-3 mt-3">
+                      <div
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          paymentMethod === "pix"
+                            ? "border-[#202d3d] bg-[#a1d5df]"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        onClick={() => setPaymentMethod("pix")}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full border-2 border-[#202d3d] flex items-center justify-center">
+                            {paymentMethod === "pix" && <div className="w-3 h-3 bg-[#202d3d] rounded-full" />}
+                          </div>
+                          <div>
+                            <p className="font-medium">PIX</p>
+                            <p className="text-sm text-gray-600">Pagamento instantâneo</p>
                           </div>
                         </div>
+                      </div>
 
-                        <div
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                            paymentMethod === "crypto"
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                          onClick={() => setPaymentMethod("crypto")}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full border-2 border-blue-500 flex items-center justify-center">
-                              {paymentMethod === "crypto" && <div className="w-3 h-3 bg-blue-500 rounded-full" />}
-                            </div>
-                            <div>
-                              <p className="font-medium">Criptomoeda</p>
-                              <p className="text-sm text-gray-600">Bitcoin, USDT, Ethereum e outras</p>
-                            </div>
+                      <div
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          paymentMethod === "crypto"
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        onClick={() => setPaymentMethod("crypto")}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full border-2 border-blue-500 flex items-center justify-center">
+                            {paymentMethod === "crypto" && <div className="w-3 h-3 bg-blue-500 rounded-full" />}
+                          </div>
+                          <div>
+                            <p className="font-medium">Criptomoeda</p>
+                            <p className="text-sm text-gray-600">Bitcoin, USDT, Ethereum e outras</p>
                           </div>
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Seleção de Crypto se método for crypto */}
-                    {paymentMethod === "crypto" && (
-                      <div>
-                        <Label className="text-base font-medium">Escolha a criptomoeda:</Label>
+                  {/* Seleção de Crypto se método for crypto */}
+                  {paymentMethod === "crypto" && (
+                    <div>
+                      <Label className="text-base font-medium">Escolha a criptomoeda:</Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+                        {getPopularCryptos().map((crypto) => (
+                          <div
+                            key={crypto.coin}
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              selectedCrypto === crypto.coin
+                                ? "border-blue-500 bg-blue-50"
+                                : "border-gray-200 hover:border-gray-300"
+                            }`}
+                            onClick={() => setSelectedCrypto(crypto.coin)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={crypto.icon || "/placeholder.svg"}
+                                alt={crypto.coin}
+                                className="w-6 h-6"
+                                onError={(e: any) => {
+                                  e.target.src = "/placeholder.svg?height=24&width=24"
+                                }}
+                              />
+                              <div>
+                                <p className="font-medium text-sm">{crypto.coin}</p>
+                                <p className="text-xs text-gray-600">{crypto.name}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {!showAllCryptos && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2 bg-transparent"
+                          onClick={() => setShowAllCryptos(true)}
+                        >
+                          Ver todas as criptomoedas
+                        </Button>
+                      )}
+
+                      {showAllCryptos && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
-                          {getPopularCryptos().map((crypto) => (
+                          {AVAILABLE_CRYPTOS.filter(
+                            (crypto) => !getPopularCryptos().some((popular) => popular.coin === crypto.coin),
+                          ).map((crypto) => (
                             <div
                               key={crypto.coin}
                               className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
@@ -1718,539 +1439,358 @@ export default function AgroDeriLanding() {
                             </div>
                           ))}
                         </div>
-
-                        {!showAllCryptos && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-2 bg-transparent"
-                            onClick={() => setShowAllCryptos(true)}
-                          >
-                            Ver todas as criptomoedas
-                          </Button>
-                        )}
-
-                        {showAllCryptos && (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
-                            {AVAILABLE_CRYPTOS.filter(
-                              (crypto) => !getPopularCryptos().some((popular) => popular.coin === crypto.coin),
-                            ).map((crypto) => (
-                              <div
-                                key={crypto.coin}
-                                className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                                  selectedCrypto === crypto.coin
-                                    ? "border-blue-500 bg-blue-50"
-                                    : "border-gray-200 hover:border-gray-300"
-                                }`}
-                                onClick={() => setSelectedCrypto(crypto.coin)}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={crypto.icon || "/placeholder.svg"}
-                                    alt={crypto.coin}
-                                    className="w-6 h-6"
-                                    onError={(e: any) => {
-                                      e.target.src = "/placeholder.svg?height=24&width=24"
-                                    }}
-                                  />
-                                  <div>
-                                    <p className="font-medium text-sm">{crypto.coin}</p>
-                                    <p className="text-xs text-gray-600">{crypto.name}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Resumo do Investimento */}
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-900 mb-2">Resumo do Investimento</h3>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span>Valor investido:</span>
-                        <span>R$ {amount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Método:</span>
-                        <span className="capitalize">
-                          {paymentMethod === "pix" ? "PIX" : `${selectedCrypto || "Crypto"}`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
-                      Voltar
-                    </Button>
-                    <Button
-                      onClick={handlePayment}
-                      className="flex-1"
-                      disabled={loading || (paymentMethod === "crypto" && !selectedCrypto)}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {paymentMethod === "pix" ? "Gerando PIX..." : "Gerando endereço..."}
-                        </>
-                      ) : paymentMethod === "pix" ? (
-                        "Gerar PIX"
-                      ) : (
-                        "Gerar Endereço Crypto"
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 2.5: QR Code PIX com Botão Manual */}
-            {currentStep === 2.5 && (
-              <Card className="max-w-2xl mx-auto">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">Pague com PIX</CardTitle>
-                  <CardDescription>
-                    Escaneie o QR Code ou copie o código PIX para finalizar seu investimento
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="bg-white border-2 border-gray-200 rounded-lg p-8 text-center">
-                    {/* QR Code Real da API */}
-                    <div className="w-64 h-64 mx-auto mb-4 flex items-center justify-center">
-                      {loading ? (
-                        <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                          <div className="text-center">
-                            <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500">Gerando PIX...</p>
-                          </div>
-                        </div>
-                      ) : qrCodeUrl ? (
-                        <div className="w-full h-full relative">
-                          <img
-                            src={qrCodeUrl || "/placeholder.svg"}
-                            alt="QR Code PIX"
-                            className="w-full h-full object-contain border rounded-lg"
-                            onError={(e: any) => {
-                              console.error("❌ Erro ao carregar QR Code:", qrCodeUrl)
-                              console.error("❌ Evento de erro:", e)
-                              e.target.src = "/placeholder.svg?height=256&width=256&text=Erro+ao+carregar+QR+Code"
-                              e.target.style.backgroundColor = "#f3f4f6"
-                            }}
-                            onLoad={() => {
-                              console.log("✅ QR Code carregado com sucesso!")
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                          <div className="text-center">
-                            <p className="text-sm text-gray-500 mb-2">QR Code não disponível</p>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                console.log("🔄 Tentando gerar PIX novamente...")
-                                generateRealPixCode()
-                              }}
-                            >
-                              Tentar Novamente
-                            </Button>
-                          </div>
-                        </div>
                       )}
                     </div>
+                  )}
+                </div>
 
-                    <div className="space-y-4">
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-sm text-gray-600 mb-2">Código PIX Copia e Cola:</p>
-                        <div className="bg-white border rounded p-3 text-xs font-mono break-all max-h-20 overflow-y-auto">
-                          {paymentString || "Carregando código PIX..."}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full mt-2 bg-transparent"
-                          onClick={copyPixCode}
-                          disabled={!paymentString}
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          Copiar Código PIX
-                        </Button>
-                      </div>
-
-                      <div className="text-center space-y-2">
-                        <p className="text-sm text-gray-600">
-                          <strong>Valor:</strong> R$ {amount.toLocaleString()}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          <strong>CPF:</strong> {userData.cpf}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          <strong>Beneficiário:</strong> AgroDeri Tecnologia LTDA
-                        </p>
-                      </div>
+                {/* Resumo do Investimento */}
+                <div className="bg-[#a1d5df] p-4 rounded-lg">
+                  <h3 className="font-semibold text-[#202d3d] mb-2">Resumo do Investimento</h3>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Valor investido:</span>
+                      <span>R$ {amount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Método:</span>
+                      <span className="capitalize">
+                        {paymentMethod === "pix" ? "PIX" : `${selectedCrypto || "Crypto"}`}
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs">⚠️</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-yellow-800 mb-1">Após realizar o pagamento</p>
-                        <p className="text-yellow-700">
-                          Clique no botão "Já fiz o pagamento" para verificar se o PIX foi processado e continuar para a
-                          próxima etapa.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs">ℹ️</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-blue-800 mb-1">Processamento do PIX</p>
-                        <p className="text-blue-700">
-                          O PIX pode levar alguns minutos para ser processado pelo sistema bancário. Fique tranquilo!
-                          Após realizar o pagamento, aguarde alguns instantes e clique em "Já fiz o pagamento" para
-                          verificar o status.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
-                      Voltar
-                    </Button>
-                    {paymentConfirmed ? (
-                      <Button className="flex-1 bg-green-600 text-white" disabled>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Pagamento Confirmado, gerar o contrato
-                      </Button>
+                <div className="flex gap-4">
+                  <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
+                    Voltar
+                  </Button>
+                  <Button
+                    onClick={handlePayment}
+                    className="flex-1 bg-[#202d3d] hover:bg-[#1a2530]"
+                    disabled={loading || (paymentMethod === "crypto" && !selectedCrypto)}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {paymentMethod === "pix" ? "Gerando PIX..." : "Gerando endereço..."}
+                      </>
+                    ) : paymentMethod === "pix" ? (
+                      "Gerar PIX"
                     ) : (
-                      <Button
-                        onClick={handlePaymentConfirmation}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                        disabled={checkingPayment}
-                      >
-                        {checkingPayment ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Verificando...
-                          </>
-                        ) : (
-                          "Já fiz o pagamento"
-                        )}
-                      </Button>
+                      "Gerar Endereço Crypto"
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Step 2.7: Endereço Crypto */}
-            {currentStep === 2.7 && (
-              <Card className="max-w-2xl mx-auto">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">Pague com {selectedCrypto}</CardTitle>
-                  <CardDescription>
-                    Envie {selectedCrypto} para o endereço abaixo para finalizar seu investimento
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="bg-white border-2 border-gray-200 rounded-lg p-6 text-center">
-                    {/* Crypto Info */}
-                    <div className="flex items-center justify-center gap-3 mb-4">
-                      <img
-                        src={AVAILABLE_CRYPTOS.find((c) => c.coin === selectedCrypto)?.icon || "/placeholder.svg"}
-                        alt={selectedCrypto}
-                        className="w-8 h-8"
-                        onError={(e: any) => {
-                          e.target.src = "/placeholder.svg?height=32&width=32"
-                        }}
-                      />
-                      <div>
-                        <div className="font-bold text-lg">{selectedCrypto}</div>
-                        <div className="text-sm text-gray-500">
-                          {AVAILABLE_CRYPTOS.find((c) => c.coin === selectedCrypto)?.name}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Loading ou Endereço */}
-                    {cryptoLoading ? (
-                      <div className="w-64 h-64 mx-auto mb-4 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+          {/* Step 2.5: QR Code PIX */}
+          {currentStep === 2.5 && (
+            <Card className="max-w-2xl mx-auto">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl">Pague com PIX</CardTitle>
+                <CardDescription>
+                  Escaneie o QR Code ou copie o código PIX para finalizar seu investimento
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="bg-white border-2 border-gray-200 rounded-lg p-8 text-center">
+                  {/* QR Code Real da API */}
+                  <div className="w-64 h-64 mx-auto mb-4 flex items-center justify-center">
+                    {loading ? (
+                      <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
                         <div className="text-center">
                           <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500">Gerando endereço...</p>
+                          <p className="text-sm text-gray-500">Gerando PIX...</p>
                         </div>
                       </div>
-                    ) : cryptoAddress ? (
-                      <div className="space-y-4">
-                        {/* QR Code do endereço */}
-                        <div className="w-64 h-64 mx-auto mb-4 flex items-center justify-center">
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(cryptoAddress)}`}
-                            alt="QR Code do endereço crypto"
-                            className="w-full h-full object-contain border rounded-lg"
-                            onError={(e: any) => {
-                              e.target.src = "/placeholder.svg?height=256&width=256&text=QR+Code+Indisponível"
-                              e.target.style.backgroundColor = "#f3f4f6"
-                            }}
-                          />
-                        </div>
-
-                        {/* Endereço para copiar */}
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-600 mb-2">Endereço da carteira:</p>
-                          <div className="bg-white border rounded p-3 text-xs font-mono break-all">{cryptoAddress}</div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full mt-2 bg-transparent"
-                            onClick={() => {
-                              navigator.clipboard.writeText(cryptoAddress)
-                              alert("Endereço copiado!")
-                            }}
-                          >
-                            <Copy className="mr-2 h-4 w-4" />
-                            Copiar Endereço
-                          </Button>
-                        </div>
+                    ) : qrCodeUrl ? (
+                      <div className="w-full h-full relative">
+                        <img
+                          src={qrCodeUrl || "/placeholder.svg"}
+                          alt="QR Code PIX"
+                          className="w-full h-full object-contain border rounded-lg"
+                          onError={(e: any) => {
+                            console.error("❌ Erro ao carregar QR Code:", qrCodeUrl)
+                            const target = e.target as HTMLImageElement
+                            target.src = "/placeholder.svg?height=256&width=256&text=Erro+ao+carregar+QR+Code"
+                            target.style.backgroundColor = "#f3f4f6"
+                          }}
+                        />
                       </div>
                     ) : (
-                      <div className="w-64 h-64 mx-auto mb-4 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500 mb-2">Erro ao gerar endereço</p>
-                          <Button size="sm" variant="outline" onClick={generateCryptoAddress}>
-                            Tentar Novamente
-                          </Button>
-                        </div>
+                      <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <p className="text-sm text-gray-500">Erro ao gerar QR Code</p>
                       </div>
                     )}
-
-                    <div className="text-center space-y-2 mt-4">
-                      <p className="text-sm text-gray-600">
-                        <strong>Valor:</strong> R$ {amount.toLocaleString()}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <strong>Rede:</strong> {cryptoNetworkName || cryptoNetwork || "Mainnet"}
-                      </p>
-                    </div>
                   </div>
 
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs">⚠️</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-yellow-800 mb-1">Após enviar a criptomoeda</p>
-                        <p className="text-yellow-700">
-                          Envie exatamente o valor em {selectedCrypto} equivalente a R$ {amount.toLocaleString()} para o
-                          endereço acima. Após a confirmação na blockchain, clique em "Já fiz o pagamento".
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
-                      Voltar
-                    </Button>
-                    {paymentConfirmed ? (
-                      <Button className="flex-1 bg-green-600 text-white" disabled>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Pagamento Confirmado
-                      </Button>
-                    ) : (
+                  {/* Código PIX Copiar e Colar */}
+                  <div className="space-y-2">
+                    <Label htmlFor="pixCode">Código PIX:</Label>
+                    <div className="relative">
+                      <Input id="pixCode" type="text" value={paymentString} readOnly className="bg-gray-50 pr-12" />
                       <Button
-                        onClick={handlePaymentConfirmation}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                        disabled={checkingPayment}
+                        variant="secondary"
+                        size="sm"
+                        className="absolute right-1 top-1 h-8 rounded-md"
+                        onClick={copyPixCode}
+                        disabled={loading}
                       >
-                        {checkingPayment ? (
+                        Copiar
+                      </Button>
+                    </div>
+                    <p className="text-sm text-gray-500">Copie o código PIX e cole no aplicativo do seu banco.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
+                    Voltar
+                  </Button>
+                  <Button
+                    onClick={handlePaymentConfirmation}
+                    className="flex-1 bg-[#202d3d] hover:bg-[#1a2530]"
+                    disabled={checkingPayment}
+                  >
+                    {checkingPayment ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Verificando Pagamento...
+                      </>
+                    ) : (
+                      "Já Paguei! Verificar"
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 2.7: Endereço Crypto */}
+          {currentStep === 2.7 && (
+            <Card className="max-w-2xl mx-auto">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl">Pague com Criptomoeda</CardTitle>
+                <CardDescription>
+                  Envie <span className="font-bold">exatamente</span> o valor solicitado para o endereço abaixo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="bg-white border-2 border-gray-200 rounded-lg p-8 text-center">
+                  {/* Endereço Crypto */}
+                  <div className="space-y-2">
+                    <Label htmlFor="cryptoAddress">Endereço {selectedCrypto}:</Label>
+                    {cryptoLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Gerando endereço...
+                      </>
+                    ) : (
+                      <>
+                        {cryptoAddress ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Verificando...
+                            <div className="relative">
+                              <Input
+                                id="cryptoAddress"
+                                type="text"
+                                value={cryptoAddress}
+                                readOnly
+                                className="bg-gray-50 pr-12"
+                              />
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="absolute right-1 top-1 h-8 rounded-md"
+                                onClick={async () => {
+                                  await navigator.clipboard.writeText(cryptoAddress)
+                                  alert("Endereço copiado!")
+                                }}
+                                disabled={loading}
+                              >
+                                Copiar
+                              </Button>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                              Envie {amount} {selectedCrypto} para este endereço.
+                            </p>
+                            {cryptoNetworkName && (
+                              <p className="text-sm text-gray-500">
+                                Rede: <span className="font-semibold">{cryptoNetworkName}</span>
+                              </p>
+                            )}
                           </>
                         ) : (
-                          "Já fiz o pagamento"
+                          <p className="text-sm text-gray-500">Erro ao gerar endereço.</p>
                         )}
-                      </Button>
+                      </>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </div>
 
-            {/* Step 3: Confirmação */}
-            {currentStep === 3 && (
-              <Card className="max-w-2xl mx-auto text-center">
-                <CardHeader>
-                  <div className="mx-auto mb-4 p-4 bg-green-100 rounded-full w-fit">
-                    <CheckCircle className="h-12 w-12 text-green-600" />
-                  </div>
-                  <CardTitle className="text-3xl text-green-600">Investimento Confirmado!</CardTitle>
-                  <CardDescription className="text-lg">
-                    Seu contrato foi criado com sucesso e está disponível para download e assinatura.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <div className="flex items-start gap-3">
-                      <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs">📄</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-blue-800 mb-1">Contrato gerado com sucesso</p>
-                        <p className="text-blue-700">
-                          Seu contrato de investimento foi criado e está pronto para download.
-                          {documentIdClicksign && (
-                            <span className="block mt-1 text-xs">ID do documento: {documentIdClicksign}</span>
-                          )}
-                        </p>
-                      </div>
+                <div className="flex gap-4">
+                  <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
+                    Voltar
+                  </Button>
+                  <Button
+                    onClick={handlePaymentConfirmation}
+                    className="flex-1 bg-[#202d3d] hover:bg-[#1a2530]"
+                    disabled={checkingPayment}
+                  >
+                    {checkingPayment ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Verificando Pagamento...
+                      </>
+                    ) : (
+                      "Já Paguei! Verificar"
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 3: Confirmação e Contrato */}
+          {currentStep === 3 && (
+            <Card className="max-w-2xl mx-auto">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl">Confirmação e Contrato</CardTitle>
+                <CardDescription>Parabéns! Seu investimento foi realizado com sucesso.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {contractCreated ? (
+                  <>
+                    <div className="text-center">
+                      <CheckCircle className="h-12 w-12 text-[#202d3d] mx-auto mb-4" />
+                      <p className="text-lg font-semibold text-gray-800">Contrato gerado com sucesso!</p>
+                      <p className="text-gray-600">Aguarde a assinatura do contrato para liberar seus tokens.</p>
                     </div>
-                  </div>
 
-                  <div className="bg-green-50 p-6 rounded-lg">
-                    <h3 className="font-semibold text-green-900 mb-4">Detalhes do seu investimento:</h3>
-                    <div className="space-y-2 text-left">
-                      <div className="flex justify-between">
-                        <span>Investidor:</span>
-                        <span className="font-medium">{userData.name}</span>
+                    {contractData && contractData.status === "pending" && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
+                            <span className="text-white text-xs">⏳</span>
+                          </div>
+                          <div className="text-sm">
+                            <p className="font-medium text-yellow-800 mb-1">Aguardando assinatura</p>
+                            <p className="text-yellow-700">
+                              Seu contrato está aguardando sua assinatura. Verifique seu e-mail para assinar o contrato.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span>CPF:</span>
-                        <span className="font-medium">{userData.cpf}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>E-mail:</span>
-                        <span className="font-medium">{userData.email}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Valor investido:</span>
-                        <span className="font-medium">R$ {amount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Método de pagamento:</span>
-                        <span className="font-medium capitalize">{paymentMethod}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Status:</span>
-                        <span className="font-medium text-green-600">Confirmado</span>
-                      </div>
-                    </div>
-                  </div>
+                    )}
 
-                  <div className="space-y-4">
+                    {documentIdClicksign && (
+                      <div className="space-y-2">
+                        <Label>ID do Documento Clicksign:</Label>
+                        <Input type="text" value={documentIdClicksign} readOnly className="bg-gray-50" />
+                      </div>
+                    )}
+
                     {contractDownloadUrl && (
-                      <Button
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={() => window.open(contractDownloadUrl, "_blank")}
-                      >
-                        <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                        Baixar Contrato (DOCX)
-                      </Button>
+                      <div className="space-y-2">
+                        <Label>Link para Download do Contrato:</Label>
+                        <a
+                          href={contractDownloadUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#202d3d] hover:underline"
+                        >
+                          Baixar Contrato
+                        </a>
+                      </div>
                     )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <Button variant="outline" onClick={resetCheckout}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Novo Investimento
-                      </Button>
-                      <Button variant="outline">
-                        <Shield className="mr-2 h-4 w-4" />
-                        Área do Investidor
-                      </Button>
-                    </div>
+                  </>
+                ) : (
+                  <div className="text-center">
+                    <Loader2 className="h-12 w-12 text-gray-400 mx-auto mb-4 animate-spin" />
+                    <p className="text-lg font-semibold text-gray-800">Gerando contrato...</p>
+                    <p className="text-gray-600">Aguarde enquanto geramos seu contrato de investimento.</p>
                   </div>
+                )}
 
-                  <div className="text-sm text-gray-600">
-                    <p>
-                      Seu contrato está disponível para download no formato DOCX. Após baixar, você pode revisar os
-                      termos e aguardar as próximas instruções para assinatura digital. Bem-vindo à revolução do agro
-                      tokenizado!
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </section>
-      )}
+                <div className="flex gap-4">
+                  <Button variant="outline" onClick={resetCheckout} className="flex-1 bg-transparent">
+                    Novo Investimento
+                  </Button>
+                  <Button
+                    className="flex-1 bg-[#202d3d] hover:bg-[#1a2530]"
+                    onClick={() => {
+                      const investorUrl = `/investor-dashboard?token=none&user=${encodeURIComponent(
+                        userData.email,
+                      )}&cpf=${unmaskValue(userData.cpf)}`
+                      window.open(investorUrl, "_blank")
+                    }}
+                  >
+                    Acessar Dashboard
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </section>
+
+      {/* Login Modal */}
       {showLoginModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center">Acompanhar Investimento</CardTitle>
-              <CardDescription className="text-center">Faça login para acessar sua área do investidor</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Acessar Área do Investidor</h3>
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">
+                  Entre com seu e-mail e senha para acompanhar seus investimentos.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
               {loginErrors.general && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-600 text-sm">{loginErrors.general}</p>
+                <div
+                  className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+                  role="alert"
+                >
+                  <strong className="font-bold">Erro:</strong>
+                  <span className="block sm:inline">{loginErrors.general}</span>
                 </div>
               )}
 
-              <div>
-                <Label htmlFor="loginEmail">Email</Label>
+              <div className="mb-4">
+                <Label htmlFor="username">E-mail</Label>
                 <Input
-                  id="loginEmail"
                   type="email"
+                  id="username"
                   placeholder="seu@email.com"
                   value={loginData.username}
                   onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
                   className={loginErrors.username ? "border-red-500" : ""}
                 />
-                {loginErrors.username && <p className="text-red-500 text-sm mt-1">{loginErrors.username}</p>}
+                {loginErrors.username && <p className="text-red-500 text-xs italic mt-1">{loginErrors.username}</p>}
               </div>
 
-              <div>
-                <Label htmlFor="loginPassword">Senha</Label>
+              <div className="mb-4">
+                <Label htmlFor="password">Senha</Label>
                 <Input
-                  id="loginPassword"
                   type="password"
+                  id="password"
                   placeholder="Sua senha"
                   value={loginData.password}
                   onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                   className={loginErrors.password ? "border-red-500" : ""}
                 />
-                {loginErrors.password && <p className="text-red-500 text-sm mt-1">{loginErrors.password}</p>}
+                {loginErrors.password && <p className="text-red-500 text-xs italic mt-1">{loginErrors.password}</p>}
               </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowLoginModal(false)
-                    setLoginData({ username: "", password: "" })
-                    setLoginErrors({ username: "", password: "", general: "" })
-                  }}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
+              <div className="items-center px-4 py-3">
                 <Button
                   onClick={handleLogin}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
                   disabled={loginLoading}
+                  className="w-full bg-[#202d3d] hover:bg-[#1a2530]"
                 >
                   {loginLoading ? (
                     <>
@@ -2262,20 +1802,16 @@ export default function AgroDeriLanding() {
                   )}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            <div className="bg-gray-50 px-4 py-3 text-right">
+              <Button variant="ghost" onClick={() => setShowLoginModal(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
         </div>
       )}
-      <footer className="bg-gray-50 py-12 border-t">
-        <div className="max-w-6xl mx-auto px-4 text-center text-gray-500">
-          <p className="text-sm">
-            © {new Date().getFullYear()} AgroDeri Tecnologia LTDA. Todos os direitos reservados.
-          </p>
-          <p className="text-xs mt-2">
-            AgroDeri é uma plataforma de tecnologia que facilita o acesso a investimentos no agronegócio.
-          </p>
-        </div>
-      </footer>
     </div>
   )
 }

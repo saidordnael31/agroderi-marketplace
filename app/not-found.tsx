@@ -12,7 +12,7 @@ export default function NotFound() {
       <header className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Sprout className="h-8 w-8 text-green-600" />
+            <img src="/images/agro-logo.png" alt="AgroDeri Logo" className="h-8 w-auto" />
             <span className="text-2xl font-bold text-gray-900">AgroDeri</span>
           </Link>
         </div>
@@ -39,7 +39,7 @@ export default function NotFound() {
                 </Link>
               </Button>
 
-              <Button asChild variant="outline" className="w-full">
+              <Button asChild variant="outline" className="w-full bg-transparent">
                 <Link href="/?step=cadastro">
                   <Sprout className="mr-2 h-4 w-4" />
                   Começar investimento
